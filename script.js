@@ -180,3 +180,101 @@ if (dashboardContainer) {
         refreshBtn.addEventListener('click', loadDashboard);
     }
 }
+
+// ====================================================================
+// MÓDULO 4: RECEPCIÓN DE MERCADERÍA (Solo se ejecuta si existe el botón)
+// ====================================================================
+const searchTransitBtn = document.getElementById('search-transit-btn');
+const transitResults = document.getElementById('transit-results');
+
+if (searchTransitBtn) {
+    searchTransitBtn.addEventListener('click', async () => {
+        const nodeId = document.getElementById('recv-node-select').value;
+        transitResults.innerHTML = '<p>⏳ Buscando contenedores en tránsito...</p>';
+
+        try {
+            const res = await fetch(`/api/transit?node=${nodeId}`);
+            const result = await res.json();
+
+            if (res.ok && result.data) {
+                if (result.data.length === 0) {
+                    transitResults.innerHTML = '<p style="color: green;">✅ No hay mercadería en tránsito para este depósito.</p>';
+                    return;
+                }
+
+                // Armar la tabla con los resultados
+                let tableHtml = `
+                    <table class="transit-table">
+                        <thead>
+                            <tr>
+                                <th>SKU</th>
+                                <th>Producto</th>
+                                <th>Cantidad en Camino</th>
+                                <th>Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+
+                result.data.forEach(item => {
+                    tableHtml += `
+                        <tr>
+                            <td><strong>${item.sku}</strong></td>
+                            <td>${item.name}</td>
+                            <td style="color: #f39c12; font-weight: bold;">${item.in_transit}</td>
+                            <td>
+                                <button class="receive-btn" data-node="${nodeId}" data-product="${item.product_id}" data-qty="${item.in_transit}">
+                                    📥 Recibir Stock
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                });
+
+                tableHtml += `</tbody></table><div id="recv-msg" style="margin-top:10px; font-weight:bold;"></div>`;
+                transitResults.innerHTML = tableHtml;
+
+                // Agregar el evento click a los nuevos botones "Recibir Stock"
+                document.querySelectorAll('.receive-btn').forEach(btn => {
+                    btn.addEventListener('click', async (e) => {
+                        const targetBtn = e.target;
+                        const pId = targetBtn.getAttribute('data-product');
+                        const nId = targetBtn.getAttribute('data-node');
+                        const q = targetBtn.getAttribute('data-qty');
+                        const msgBox = document.getElementById('recv-msg');
+
+                        targetBtn.innerText = '⏳ Procesando...';
+                        targetBtn.disabled = true;
+
+                        try {
+                            const rx = await fetch('/api/receive', {
+                                method: 'POST',
+                                body: JSON.stringify({ nodeId: nId, productId: pId, qty: q }),
+                                headers: { 'Content-Type': 'application/json' }
+                            });
+                            const rxData = await rx.json();
+
+                            if (rx.ok) {
+                                msgBox.style.color = 'green';
+                                msgBox.innerText = `✅ Éxito: ${rxData.message}`;
+                                targetBtn.parentElement.parentElement.style.opacity = '0.3'; // Ocultar visualmente la fila procesada
+                            } else {
+                                msgBox.style.color = 'red';
+                                msgBox.innerText = `❌ Error: ${rxData.error}`;
+                                targetBtn.innerText = '📥 Recibir Stock';
+                                targetBtn.disabled = false;
+                            }
+                        } catch (err) {
+                            msgBox.innerText = `❌ Error: ${err.message}`;
+                        }
+                    });
+                });
+
+            } else {
+                transitResults.innerHTML = `<p style="color: red;">❌ Error: ${result.error}</p>`;
+            }
+        } catch (error) {
+            transitResults.innerHTML = `<p style="color: red;">❌ Error de conexión: ${error.message}</p>`;
+        }
+    });
+}
