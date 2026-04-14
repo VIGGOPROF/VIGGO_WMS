@@ -363,3 +363,20 @@ button:disabled {
     font-weight: bold;
     display: inline-block;
 }
+/* =========================================
+   CORRECCIÓN DE PESTAÑAS (TABS)
+   ========================================= */
+.tab-btn {
+    color: #64748b !important;
+    background: transparent !important;
+    text-shadow: none !important;
+}
+.tab-btn:hover {
+    color: #0f172a !important;
+    background: #f1f5f9 !important;
+}
+.tab-btn.active {
+    color: #2563eb !important;
+    background: #eff6ff !important;
+    border-bottom: 3px solid #2563eb !important;
+}
