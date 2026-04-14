@@ -16,7 +16,6 @@ export async function onRequestPost(context) {
 
         if (!sku) continue;
 
-        // Si la fábrica no existe, la crea dinámicamente para evitar errores
         if (factory) {
             statements.push(db.prepare("INSERT OR IGNORE INTO factories (name) VALUES (?)").bind(factory));
         }
@@ -26,14 +25,16 @@ export async function onRequestPost(context) {
                 INSERT INTO products (sku, name, category, factory_name, display_order) 
                 VALUES (?, ?, ?, ?, ?)
                 ON CONFLICT(sku) DO UPDATE SET 
-                    name = excluded.name, category = excluded.category, 
-                    factory_name = excluded.factory_name, display_order = excluded.display_order
+                    name = COALESCE(NULLIF(excluded.name, excluded.sku), NULLIF(excluded.name, ''), products.name),
+                    category = COALESCE(NULLIF(excluded.category, ''), products.category),
+                    factory_name = COALESCE(NULLIF(excluded.factory_name, ''), products.factory_name),
+                    display_order = excluded.display_order
             `).bind(sku, name || sku, category, factory, order)
         );
     }
 
     await db.batch(statements);
-    return new Response(JSON.stringify({ success: true, message: `Catálogo de ${items.length} artículos actualizado.` }));
+    return new Response(JSON.stringify({ success: true, message: `Catálogo actualizado.` }));
   } catch (error) {
     return new Response(JSON.stringify({ error: error.message }), { status: 500 });
   }
