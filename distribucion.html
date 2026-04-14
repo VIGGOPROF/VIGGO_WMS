@@ -1,44 +1,63 @@
-<div class="module-container">
-  <h2>Distribución y Facturación Internacional</h2>
-  <p>Transfiere mercadería entre depósitos y genera la proforma intercompany.</p>
-  
-  <div class="form-group">
-    <label>Nodo Origen (Despacha):</label>
-    <select id="origen-select">
-      <option value="1">China Central</option>
-    </select>
-  </div>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Distribución - Viiggo WMS</title>
+    <link rel="stylesheet" href="style.css"> 
+</head>
+<body>
 
-  <div class="form-group">
-    <label>Nodo Destino (Recibe):</label>
-    <select id="destino-select">
-      <option value="2">Argentina HQ</option>
-      <option value="3">Paraguay Dist.</option>
-      <option value="4">Chile Filial</option>
-    </select>
-  </div>
+    <div class="module-container">
+      <h2>Distribución y Facturación Internacional</h2>
+      <p>Transfiere mercadería entre depósitos y genera la proforma intercompany.</p>
+      
+      <div class="form-group">
+        <label>Nodo Origen (Despacha):</label>
+        <select id="origen-select">
+          <option value="1">China Central</option>
+        </select>
+      </div>
 
-  <div class="form-group">
-    <label>Método de Transporte:</label>
-    <select id="transporte-select">
-      <option value="1">Barco (aprox 45 días)</option>
-      <option value="2">Avión (aprox 10 días)</option>
-      <option value="3">Courier (aprox 5 días)</option>
-    </select>
-  </div>
+      <div class="form-group">
+        <label>Nodo Destino (Recibe):</label>
+        <select id="destino-select">
+          <option value="2">Argentina HQ</option>
+          <option value="3">Paraguay Dist.</option>
+          <option value="4">Chile Filial</option>
+        </select>
+      </div>
 
-  <hr>
+      <div class="form-group">
+        <label>Método de Transporte:</label>
+        <select id="transporte-select">
+          <option value="1">Barco (aprox 45 días)</option>
+          <option value="2">Avión (aprox 10 días)</option>
+          <option value="3">Courier (aprox 5 días)</option>
+        </select>
+      </div>
 
-  <h3>Detalle de la Orden</h3>
-  <div class="form-group">
-    <label>SKU a Transferir:</label>
-    <input type="text" id="transfer-sku" placeholder="Ej: VIG-CLIP-01">
-  </div>
-  <div class="form-group">
-    <label>Cantidad:</label>
-    <input type="number" id="transfer-qty" placeholder="Ej: 500">
-  </div>
+      <hr>
 
+      <h3>Detalle de la Orden</h3>
+      <div class="form-group">
+        <label>SKU a Transferir:</label>
+        <input type="text" id="transfer-sku" placeholder="Ej: VIG-CLIP-01">
+      </div>
+      <div class="form-group">
+        <label>Cantidad:</label>
+        <input type="number" id="transfer-qty" placeholder="Ej: 500">
+      </div>
+
+      <button id="dispatch-btn">Generar Orden de Despacho</button>
+      
+      <div id="transfer-status" style="margin-top: 15px; font-weight: bold;"></div>
+    </div>
+
+    <script src="script.js"></script>
+    
+</body>
+</html>
   <button id="dispatch-btn">Generar Orden de Despacho</button>
   
   <div id="transfer-status" style="margin-top: 15px; font-weight: bold;"></div>
