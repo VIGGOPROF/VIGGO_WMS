@@ -113,3 +113,70 @@ if (dispatchBtn) {
         }
     });
 }
+
+// ====================================================================
+// MÓDULO 3: DASHBOARD GLOBAL (Solo se ejecuta si existe el contenedor)
+// ====================================================================
+const dashboardContainer = document.getElementById('dashboard-container');
+const refreshBtn = document.getElementById('refresh-dashboard');
+
+if (dashboardContainer) {
+    const loadDashboard = async () => {
+        dashboardContainer.innerHTML = '<p>⏳ Consultando base de datos global...</p>';
+        
+        try {
+            const res = await fetch('/api/dashboard');
+            const result = await res.json();
+
+            if (res.ok && result.data) {
+                dashboardContainer.innerHTML = ''; // Limpiamos el contenedor
+                
+                // Recorremos cada país (nodo) que nos devolvió la API
+                for (const [nodeName, nodeInfo] of Object.entries(result.data)) {
+                    
+                    let itemsHtml = '';
+                    if (nodeInfo.items.length === 0) {
+                        itemsHtml = '<p style="color: gray; font-style: italic;">Sin stock registrado</p>';
+                    } else {
+                        nodeInfo.items.forEach(item => {
+                            // Mostrar tránsito solo si hay mercadería viajando
+                            const transitBadge = item.transit > 0 
+                                ? `<span class="stock-transit">(+${item.transit} en camino)</span>` 
+                                : '';
+                                
+                            itemsHtml += `
+                                <div class="stock-item">
+                                    <span><strong>${item.sku}</strong> - ${item.name}</span>
+                                    <span>Físico: <strong>${item.physical}</strong> ${transitBadge}</span>
+                                </div>
+                            `;
+                        });
+                    }
+
+                    // Construir la tarjeta del País
+                    const cardHtml = `
+                        <div class="node-card">
+                            <h3>🌎 ${nodeName} (${nodeInfo.code})</h3>
+                            <div class="card-content">
+                                ${itemsHtml}
+                            </div>
+                        </div>
+                    `;
+                    dashboardContainer.innerHTML += cardHtml;
+                }
+            } else {
+                dashboardContainer.innerHTML = `<p style="color: red;">❌ Error: ${result.error}</p>`;
+            }
+        } catch (error) {
+            dashboardContainer.innerHTML = `<p style="color: red;">❌ Error de red: ${error.message}</p>`;
+        }
+    };
+
+    // Cargar al abrir la página
+    loadDashboard();
+
+    // Recargar al presionar el botón
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', loadDashboard);
+    }
+}
