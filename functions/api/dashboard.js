@@ -31,7 +31,7 @@ export async function onRequestGet(context) {
     
     const { results: inventory } = await db.prepare(query).all();
 
-    // AQUÍ ESTÁ EL TRUCO: Empaquetamos todo dentro de "data" como el frontend lo espera
+    // 3. Respuesta empaquetada correctamente para tu script visual
     return new Response(JSON.stringify({ 
         status: "success", 
         data: {
@@ -41,11 +41,6 @@ export async function onRequestGet(context) {
     }), {
         headers: { "Content-Type": "application/json" }
     });
-
-  } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), { status: 500 });
-  }
-}
 
   } catch (error) {
     return new Response(JSON.stringify({ error: error.message }), { status: 500 });
