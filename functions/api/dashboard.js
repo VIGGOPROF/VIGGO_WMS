@@ -31,7 +31,13 @@ export async function onRequestGet(context) {
     
     const { results: inventory } = await db.prepare(query).all();
 
-    return new Response(JSON.stringify({ status: "success", nodes, inventory }), {
+    // AQUÍ ESTÁ EL TRUCO: Enviamos la información como "data" y como "inventory"
+    return new Response(JSON.stringify({ 
+        status: "success", 
+        data: inventory, 
+        inventory: inventory,
+        nodes: nodes 
+    }), {
         headers: { "Content-Type": "application/json" }
     });
 
