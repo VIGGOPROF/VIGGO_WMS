@@ -511,14 +511,18 @@ const priceStatus = document.getElementById('price-list-status');
 const savePricesBtn = document.getElementById('save-prices-btn');
 const priceExcelInput = document.getElementById('price-excel-file');
 
+// 1. Mostrar siempre el botón de guardar si existe en el HTML
+if (savePricesBtn) {
+    savePricesBtn.style.display = 'inline-flex';
+}
+
 if (priceLoadBtn) {
-    // 1. Consultar Precios Actuales
+    // 2. Consultar Precios Actuales (Para edición manual)
     priceLoadBtn.addEventListener('click', async () => {
         const nodeId = document.getElementById('price-node-select').value;
         priceStatus.innerHTML = '⏳ Cargando lista de precios...';
         priceStatus.style.display = 'block';
         pricesTable.style.display = 'none';
-        savePricesBtn.style.display = 'none';
 
         try {
             const res = await fetch(`/api/prices?node=${nodeId}`);
@@ -529,7 +533,7 @@ if (priceLoadBtn) {
         } catch (err) { priceStatus.innerText = '❌ Error al conectar.'; }
     });
 
-    // 2. Procesar Excel y volcarlo a la tabla (Pre-visualización)
+    // 3. Procesar Excel (Soporta solo SKU y Precio)
     priceExcelInput.addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -543,7 +547,7 @@ if (priceLoadBtn) {
             
             // Mapeo "A prueba de balas" (ignora espacios invisibles y mayúsculas)
             const previewData = json.map(row => {
-                let sku = '', name = 'Carga desde Excel', price = 0, product_id = null;
+                let sku = '', name = 'Actualización rápida', price = 0, product_id = null;
                 
                 for (const key in row) {
                     const k = key.trim().toLowerCase();
@@ -556,11 +560,13 @@ if (priceLoadBtn) {
                 return { product_id, sku, name, price };
             });
 
-            // Filtramos las filas que hayan quedado sin SKU por si el Excel tiene filas en blanco abajo
+            // Filtramos las filas que hayan quedado sin SKU
             const validData = previewData.filter(item => item.sku !== '');
 
             renderPriceRows(validData);
-            priceStatus.innerHTML = '✨ <span style="color:green;">Excel cargado en la tabla. Revisa y guarda los cambios.</span>';
+            priceStatus.innerHTML = '✨ <span style="color:green;">Excel cargado. Revisa y haz clic en "Guardar Cambios".</span>';
+            // Vaciamos el input para permitir subir el mismo archivo si hay error
+            priceExcelInput.value = ''; 
         };
         reader.readAsArrayBuffer(file);
     });
@@ -584,35 +590,55 @@ if (priceLoadBtn) {
         });
         priceStatus.style.display = 'none';
         pricesTable.style.display = 'table';
-        savePricesBtn.style.display = 'inline-flex';
     };
 
-    // 3. Guardar cambios (Vengan de edición manual o de Excel)
-    savePricesBtn.addEventListener('click', async () => {
-        const nodeId = document.getElementById('price-node-select').value;
-        const inputs = document.querySelectorAll('.price-input');
-        const prices = Array.from(inputs).map(inp => ({
-            productId: inp.getAttribute('data-pid'),
-            sku: inp.getAttribute('data-sku'),
-            price: inp.value
-        }));
-
-        savePricesBtn.disabled = true;
-        savePricesBtn.innerText = '⏳ Guardando...';
-
-        try {
-            const res = await fetch('/api/prices', {
-                method: 'POST',
-                body: JSON.stringify({ nodeId, prices }),
-                headers: { 'Content-Type': 'application/json' }
-            });
-            if (res.ok) {
-                alert('✅ Lista de precios actualizada correctamente.');
-                savePricesBtn.innerText = '💾 Guardar Cambios en la Lista';
+    // 4. Guardar cambios (Vengan de edición manual o de Excel)
+    if (savePricesBtn) {
+        savePricesBtn.addEventListener('click', async () => {
+            const nodeId = document.getElementById('price-node-select').value;
+            const inputs = document.querySelectorAll('.price-input');
+            
+            if (inputs.length === 0) {
+                alert('⚠️ No hay precios en la tabla para guardar. Carga un Excel o consulta la lista primero.');
+                return;
             }
-        } catch (err) { alert('❌ Error al guardar.'); }
-        savePricesBtn.disabled = false;
-    });
+
+            const prices = Array.from(inputs).map(inp => ({
+                productId: inp.getAttribute('data-pid'),
+                sku: inp.getAttribute('data-sku'),
+                price: inp.value
+            }));
+
+            savePricesBtn.disabled = true;
+            const originalText = savePricesBtn.innerText;
+            savePricesBtn.innerText = '⏳ Guardando...';
+
+            try {
+                const res = await fetch('/api/prices', {
+                    method: 'POST',
+                    body: JSON.stringify({ nodeId, prices }),
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                const result = await res.json();
+                
+                if (res.ok) {
+                    alert('✅ ' + (result.message || 'Lista de precios actualizada correctamente.'));
+                    // Limpiamos la tabla visual para confirmar que se guardó
+                    pricesTable.style.display = 'none';
+                    priceStatus.style.display = 'block';
+                    priceStatus.innerHTML = '✅ <span style="color:green;">Precios guardados. Puedes hacer otra carga.</span>';
+                } else {
+                    alert('❌ Error: ' + result.error);
+                }
+            } catch (err) { 
+                alert('❌ Error de conexión al guardar.'); 
+            } finally {
+                savePricesBtn.disabled = false;
+                savePricesBtn.innerText = originalText;
+            }
+        });
+    }
 }
 
 // ====================================================================
