@@ -2,19 +2,10 @@ export async function onRequestGet(context) {
   try {
     const db = context.env.DB;
 
-    // 1. Aquí está tu código ordenando las columnas (Nodos)
-    const { results: nodes } = await db.prepare(`
-        SELECT id, name FROM nodes 
-        ORDER BY 
-          CASE id 
-            WHEN 1 THEN 1 /* China Central */
-            WHEN 5 THEN 2 /* Depósito Fábrica */
-            WHEN 2 THEN 3 /* Argentina HQ */
-            WHEN 3 THEN 4 /* Paraguay Dist. */
-            WHEN 4 THEN 5 /* Chile Filial */
-            ELSE 6 
-          END
-    `).all();
+    /const { results: nodes } = await db.prepare(`
+    SELECT id, name FROM nodes 
+    ORDER BY display_order ASC
+`).all();
 
     // 2. Aquí obtenemos el inventario respetando el Orden de tu Catálogo
     const query = `
