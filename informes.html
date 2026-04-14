@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Informes y Analítica | Viiggo WMS</title>
+    <title>Informes y MRP | Viiggo WMS</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="style.css">
     <style>
@@ -21,124 +21,169 @@
             border-radius: 12px;
             padding: 20px;
             box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
         }
         
         .chart-card h3 { color: var(--primary); font-size: 1.1rem; border-bottom: 2px solid var(--bg-app); padding-bottom: 10px; margin-bottom: 15px; }
         
-        /* Estilos para el Radar de Alertas */
-        .alerts-container { max-height: 500px; overflow-y: auto; }
+        /* Alertas */
+        .alerts-container { max-height: 400px; overflow-y: auto; }
         .alert-item {
-            display: flex;
-            align-items: flex-start;
-            gap: 12px;
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 10px;
-            border-left: 4px solid transparent;
-            background: #f8fafc;
+            display: flex; align-items: flex-start; gap: 12px; padding: 12px;
+            border-radius: 8px; margin-bottom: 10px; border-left: 4px solid transparent; background: #f8fafc;
         }
         .alert-item.critical { border-left-color: #ef4444; background: #fef2f2; }
         .alert-item.warning { border-left-color: #f59e0b; background: #fffbeb; }
-        
-        .alert-icon { font-size: 1.5rem; }
-        .alert-content h4 { margin: 0 0 4px 0; font-size: 0.95rem; color: var(--text-main); }
-        .alert-content p { margin: 0; font-size: 0.8rem; color: var(--text-muted); }
         .alert-badge { font-weight: bold; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; }
         .badge-red { background: #fee2e2; color: #b91c1c; }
         .badge-yellow { background: #fef3c7; color: #b45309; }
+        
+        /* Controles MRP */
+        .mrp-controls {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;
+            background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 15px;
+        }
+        .mrp-controls label { display: block; font-size: 0.85rem; font-weight: bold; color: var(--text-main); margin-bottom: 5px; }
+        .mrp-controls input, .mrp-controls select { width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; }
+        
+        .mrp-table th { background: #0f172a; color: white; padding: 10px; font-size: 0.85rem; }
+        .mrp-table td { padding: 10px; border-bottom: 1px solid #e2e8f0; font-size: 0.9rem; }
+        .row-critical { background-color: #fef2f2; }
     </style>
 </head>
 <body>
 
-  <aside class="sidebar">
-    <div class="brand">
-        <div class="brand-logo">V</div>
-        <div class="brand-text"><strong>Usuario: Admin</strong><small>Control Logístico</small></div>
-    </div>
-    <nav class="nav">
-        <a href="dashboard.html"><span class="nav-icon">📊</span> Dashboard</a>
-        <a href="catalogo.html"><span class="nav-icon">📖</span> Catálogo</a>
-        <a href="index.html"><span class="nav-icon">📦</span> Ingreso (Excel)</a>
-        <a href="distribucion.html"><span class="nav-icon">🚛</span> Distribución</a>
-        <a href="transito.html"><span class="nav-icon">🚢</span> En Tránsito</a>
-        <a href="recepcion.html"><span class="nav-icon">📥</span> Recepción</a>
-        <a href="precios.html"><span class="nav-icon">💰</span> Precios</a>
-        <a href="documentos.html"><span class="nav-icon">📄</span> Documentos</a>
-        <a href="informes.html"><span class="active">📈</span> Informes</a>
-    </nav>
-</aside>
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="brand-logo">V</div>
+            <div class="brand-text"><strong>Usuario: Admin</strong><small>Control Logístico</small></div>
+        </div>
+        <nav class="nav">
+            <a href="dashboard.html"><span class="nav-icon">📊</span> Dashboard</a>
+            <a href="catalogo.html"><span class="nav-icon">📖</span> Catálogo</a>
+            <a href="index.html"><span class="nav-icon">📦</span> Ingreso (Excel)</a>
+            <a href="distribucion.html"><span class="nav-icon">🚛</span> Distribución</a>
+            <a href="transito.html"><span class="nav-icon">🚢</span> En Tránsito</a>
+            <a href="recepcion.html"><span class="nav-icon">📥</span> Recepción</a>
+            <a href="precios.html"><span class="nav-icon">💰</span> Precios</a>
+            <a href="documentos.html"><span class="nav-icon">📄</span> Documentos</a>
+            <a href="informes.html" class="active"><span class="nav-icon">📈</span> Informes</a>
+        </nav>
+    </aside>
 
     <main class="main-content">
         <div class="module-container">
             <header style="display: flex; justify-content: space-between; align-items: center;">
                 <div>
-                    <h2>Centro de Inteligencia (BI)</h2>
-                    <p>Visualiza la distribución de tu inventario global y recibe alertas automáticas de anomalías.</p>
+                    <h2>Centro de Inteligencia y MRP</h2>
+                    <p>Análisis de métricas globales y proyecciones de compras mensuales.</p>
                 </div>
-                <button onclick="loadReports()" style="background: white; color: var(--primary); border: 1px solid var(--border);">🔄 Actualizar Datos</button>
             </header>
 
             <div class="dashboard-grid">
                 <div style="display: flex; flex-direction: column; gap: 20px;">
                     <div class="chart-card">
-                        <h3>🌍 Volumen de Stock por País / Depósito</h3>
-                        <canvas id="nodeChart" height="100"></canvas>
+                        <h3>🌍 Volumen de Stock Físico por País</h3>
+                        <canvas id="nodeChart" height="80"></canvas>
                     </div>
                     <div class="chart-card">
-                        <h3>🏷️ Distribución por Categoría de Producto</h3>
-                        <div style="height: 250px; display: flex; justify-content: center;">
+                        <h3>🏷️ Distribución por Categoría</h3>
+                        <div style="height: 200px; display: flex; justify-content: center;">
                             <canvas id="categoryChart"></canvas>
                         </div>
                     </div>
                 </div>
 
                 <div class="chart-card">
-                    <h3>🚨 Radar de Anomalías Automático</h3>
+                    <h3>🚨 Radar de Anomalías (Global)</h3>
                     <div class="alerts-container" id="alerts-list">
                         <p style="text-align: center; color: var(--text-muted); padding: 20px;">Analizando datos...</p>
                     </div>
                 </div>
             </div>
+
+            <div class="chart-card" style="margin-top: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h3>📊 Planeamiento de Compras Sugerido (Mensualizado)</h3>
+                    <button id="btn-export-mrp" style="background: #10b981; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; display: none;">
+                        📥 Generar Excel Sugerido
+                    </button>
+                </div>
+                
+                <div class="mrp-controls">
+                    <div>
+                        <label>Analizar País / Depósito:</label>
+                        <select id="mrp-node-select">
+                            <option value="">Seleccione un depósito...</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Tiempo Envío desde Fábrica (Días):</label>
+                        <input type="number" id="mrp-lead-time" value="60" min="1">
+                    </div>
+                    <div>
+                        <label>Stock de Seguridad Deseado (Meses):</label>
+                        <input type="number" id="mrp-safety-stock" value="1.5" step="0.5" min="0">
+                    </div>
+                    <div style="display: flex; align-items: flex-end;">
+                        <button id="btn-calc-mrp" style="width: 100%; height: 35px;">Calcular Proyección</button>
+                    </div>
+                </div>
+
+                <div style="overflow-x: auto;">
+                    <table class="mrp-table" style="width: 100%; text-align: left; border-collapse: collapse;">
+                        <thead>
+                            <tr>
+                                <th>SKU</th>
+                                <th>Producto</th>
+                                <th style="text-align: center;">Stock (Físico + Tránsito)</th>
+                                <th style="text-align: center;">Venta Mensual (VPM)</th>
+                                <th style="text-align: center;">Meses de Cobertura</th>
+                                <th style="text-align: right; background: #047857;">Sugerido Comprar</th>
+                            </tr>
+                        </thead>
+                        <tbody id="mrp-tbody">
+                            <tr><td colspan="6" style="text-align: center; color: #64748b;">Selecciona un país y calcula para ver las sugerencias.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
         </div>
     </main>
 
     <script>
-        // Variables para guardar las instancias de los gráficos y poder destruirlas al actualizar
+        // ==========================================
+        // 1. LÓGICA DE GRÁFICOS Y ALERTAS GLOBALES
+        // ==========================================
         let nodeChartInstance = null;
         let categoryChartInstance = null;
 
         const loadReports = async () => {
-            const alertsList = document.getElementById('alerts-list');
             try {
                 const res = await fetch('/api/reports');
                 const result = await res.json();
-                
                 if (res.ok && result.data) {
-                    renderNodeChart(result.data.byNode);
-                    renderCategoryChart(result.data.byCategory);
-                    renderAlerts(result.data.alerts);
-                } else {
-                    alertsList.innerHTML = '<p style="color:red; text-align:center;">Error al cargar datos.</p>';
+                    if (result.data.byNode) renderNodeChart(result.data.byNode);
+                    if (result.data.byCategory) renderCategoryChart(result.data.byCategory);
+                    if (result.data.alerts) renderAlerts(result.data.alerts);
                 }
             } catch (e) {
-                alertsList.innerHTML = '<p style="color:red; text-align:center;">Error de conexión.</p>';
+                document.getElementById('alerts-list').innerHTML = '<p style="color:red; text-align:center;">Error de conexión API Informes.</p>';
             }
         };
 
         const renderNodeChart = (data) => {
             const ctx = document.getElementById('nodeChart').getContext('2d');
             if (nodeChartInstance) nodeChartInstance.destroy();
-            
             nodeChartInstance = new Chart(ctx, {
                 type: 'bar',
                 data: {
                     labels: data.map(d => d.label),
                     datasets: [{
-                        label: 'Unidades Físicas Totales',
+                        label: 'Unidades Físicas',
                         data: data.map(d => d.value),
-                        backgroundColor: 'rgba(37, 99, 235, 0.7)',
-                        borderColor: 'rgba(37, 99, 235, 1)',
-                        borderWidth: 1,
+                        backgroundColor: '#3b82f6',
                         borderRadius: 4
                     }]
                 },
@@ -149,14 +194,13 @@
         const renderCategoryChart = (data) => {
             const ctx = document.getElementById('categoryChart').getContext('2d');
             if (categoryChartInstance) categoryChartInstance.destroy();
-            
-            nodeChartInstance = new Chart(ctx, {
+            categoryChartInstance = new Chart(ctx, {
                 type: 'doughnut',
                 data: {
                     labels: data.map(d => d.label),
                     datasets: [{
                         data: data.map(d => d.value),
-                        backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#64748b'],
+                        backgroundColor: ['#10b981', '#f59e0b', '#3b82f6', '#8b5cf6', '#ef4444'],
                         borderWidth: 0
                     }]
                 },
@@ -167,39 +211,145 @@
         const renderAlerts = (alerts) => {
             const container = document.getElementById('alerts-list');
             if (alerts.length === 0) {
-                container.innerHTML = `
-                    <div style="text-align:center; padding: 40px 20px; color: var(--success);">
-                        <span style="font-size: 3rem; display:block; margin-bottom:10px;">✅</span>
-                        <strong>Inventario Saludable</strong><br>
-                        <small>No se detectaron quiebres ni excesos de stock.</small>
-                    </div>`;
+                container.innerHTML = '<p style="text-align:center; color:green; padding:20px;">✅ Inventario Global Saludable</p>';
                 return;
             }
-
             container.innerHTML = alerts.map(a => {
-                const isCritical = a.alert_type === 'critical';
-                const icon = isCritical ? '📉' : '📈';
-                const badgeClass = isCritical ? 'badge-red' : 'badge-yellow';
-                const title = isCritical ? 'Quiebre de Stock Inminente' : 'Exceso de Inventario';
-                const message = isCritical 
-                    ? `Solo quedan <strong style="color:#b91c1c;">${a.quantity}</strong> unidades en ${a.node}. Solicitar reposición urgente.`
-                    : `Capital inmovilizado. <strong style="color:#b45309;">${a.quantity}</strong> unidades en ${a.node}. Evaluar promociones.`;
-
+                const isCrit = a.alert_type === 'critical';
                 return `
                     <div class="alert-item ${a.alert_type}">
-                        <div class="alert-icon">${icon}</div>
-                        <div class="alert-content">
-                            <h4>${a.sku} <span class="alert-badge ${badgeClass}">${title}</span></h4>
-                            <p><strong>${a.name}</strong></p>
-                            <p style="margin-top:5px;">${message}</p>
+                        <div style="font-size:1.5rem;">${isCrit ? '📉' : '📈'}</div>
+                        <div>
+                            <h4 style="margin:0 0 5px 0; font-size:0.9rem;">${a.sku} <span class="alert-badge ${isCrit?'badge-red':'badge-yellow'}">${isCrit?'Quiebre':'Exceso'}</span></h4>
+                            <p style="margin:0; font-size:0.8rem;">${a.name}</p>
+                            <p style="margin:0; font-size:0.8rem; margin-top:4px;"><strong>${a.quantity}</strong> unid. en ${a.node}</p>
                         </div>
                     </div>
                 `;
             }).join('');
         };
 
-        // Cargar al iniciar
-        window.onload = loadReports;
+        // ==========================================
+        // 2. LÓGICA DE PLANEAMIENTO (MRP MENSUAL)
+        // ==========================================
+        let currentMrpData = [];
+
+        const loadNodesForMRP = async () => {
+            const select = document.getElementById('mrp-node-select');
+            try {
+                const res = await fetch('/api/nodes');
+                const result = await res.json();
+                if (res.ok && result.data) {
+                    result.data.forEach(n => {
+                        select.innerHTML += `<option value="${n.id}">${n.name}</option>`;
+                    });
+                }
+            } catch (e) { console.error("Error cargando nodos MRP"); }
+        };
+
+        document.getElementById('btn-calc-mrp').addEventListener('click', async () => {
+            const nodeId = document.getElementById('mrp-node-select').value;
+            const tbody = document.getElementById('mrp-tbody');
+            const exportBtn = document.getElementById('btn-export-mrp');
+            
+            if (!nodeId) { alert("Selecciona un país/depósito primero."); return; }
+            
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">⏳ Calculando proyecciones...</td></tr>';
+            exportBtn.style.display = 'none';
+
+            try {
+                const res = await fetch(`/api/purchase_suggested?nodeId=${nodeId}`);
+                const result = await res.json();
+
+                if (res.ok && result.data) {
+                    currentMrpData = result.data;
+                    renderMrpTable();
+                    exportBtn.style.display = 'block';
+                } else {
+                    tbody.innerHTML = `<tr><td colspan="6" style="color:red; text-align:center;">Error: ${result.error}</td></tr>`;
+                }
+            } catch (err) {
+                tbody.innerHTML = `<tr><td colspan="6" style="color:red; text-align:center;">Error de conexión.</td></tr>`;
+            }
+        });
+
+        const renderMrpTable = () => {
+            const leadTimeDays = parseFloat(document.getElementById('mrp-lead-time').value) || 60;
+            const safetyMonths = parseFloat(document.getElementById('mrp-safety-stock').value) || 1.5;
+            const tbody = document.getElementById('mrp-tbody');
+            
+            const leadTimeMonths = leadTimeDays / 30;
+            const targetMonths = leadTimeMonths + safetyMonths;
+            
+            let html = '';
+
+            currentMrpData.forEach(item => {
+                const totalStock = item.physical_stock + item.transit_stock;
+                const vpm = item.avg_monthly_sales;
+                const coverage = totalStock / vpm;
+                
+                // (Meses a cubrir * Venta Mensual) - Stock Actual
+                const needed = Math.max(0, Math.ceil((targetMonths * vpm) - totalStock));
+                
+                const isCritical = coverage <= leadTimeMonths;
+                const rowClass = isCritical ? 'row-critical' : '';
+                const warningIcon = isCritical ? '⚠️ ' : '';
+
+                html += `
+                    <tr class="${rowClass}">
+                        <td><strong>${item.sku}</strong></td>
+                        <td>${warningIcon}${item.name}</td>
+                        <td style="text-align: center;">${totalStock}</td>
+                        <td style="text-align: center;">${vpm}</td>
+                        <td style="text-align: center; font-weight: bold; color: ${isCritical ? '#b91c1c' : '#333'};">${coverage.toFixed(1)} meses</td>
+                        <td style="text-align: right; font-weight: bold; font-size: 1.05rem; color: #047857;">${needed > 0 ? '+'+needed : '0'}</td>
+                    </tr>
+                `;
+            });
+            tbody.innerHTML = html;
+        };
+
+        // Recalcular instantáneamente si se cambian los inputs de tiempo
+        document.getElementById('mrp-lead-time').addEventListener('input', () => { if(currentMrpData.length > 0) renderMrpTable(); });
+        document.getElementById('mrp-safety-stock').addEventListener('input', () => { if(currentMrpData.length > 0) renderMrpTable(); });
+
+        // Exportar a Excel
+        document.getElementById('btn-export-mrp').addEventListener('click', () => {
+            if(currentMrpData.length === 0) return;
+            
+            const leadTimeDays = parseFloat(document.getElementById('mrp-lead-time').value) || 60;
+            const safetyMonths = parseFloat(document.getElementById('mrp-safety-stock').value) || 1.5;
+            const leadTimeMonths = leadTimeDays / 30;
+            const targetMonths = leadTimeMonths + safetyMonths;
+            const nodeName = document.getElementById('mrp-node-select').options[document.getElementById('mrp-node-select').selectedIndex].text;
+
+            let csv = `Planificacion Viggo MRP - ${nodeName}\n`;
+            csv += `Tiempo Envio (Dias),${leadTimeDays},Stock Seguridad (Meses),${safetyMonths}\n\n`;
+            csv += 'SKU,Producto,Stock Total (Fisico+Transito),Venta Mensual (VPM),Meses Cobertura,Sugerido Comprar\n';
+            
+            currentMrpData.forEach(item => {
+                const totalStock = item.physical_stock + item.transit_stock;
+                const coverage = totalStock / item.avg_monthly_sales;
+                const needed = Math.max(0, Math.ceil((targetMonths * item.avg_monthly_sales) - totalStock));
+                
+                const cleanName = item.name.replace(/,/g, '');
+                csv += `${item.sku},${cleanName},${totalStock},${item.avg_monthly_sales},${coverage.toFixed(1)},${needed}\n`;
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.setAttribute("download", `Sugerido_Compra_Viggo_${nodeName.replace(/ /g,'_')}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        });
+
+        // Inicializar
+        window.onload = () => {
+            loadReports();
+            loadNodesForMRP();
+        };
     </script>
 </body>
 </html>
