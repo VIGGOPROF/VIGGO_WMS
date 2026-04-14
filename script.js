@@ -331,3 +331,70 @@ if (outboundBtn) {
         }
     });
 }
+
+// ====================================================================
+// MÓDULO 6: GESTOR DE PRECIOS (Solo se ejecuta si existe el botón)
+// ====================================================================
+const loadPricesBtn = document.getElementById('load-prices-btn');
+const priceContainer = document.getElementById('price-list-container');
+const savePricesBtn = document.getElementById('save-prices-btn');
+
+if (loadPricesBtn) {
+    loadPricesBtn.addEventListener('click', async () => {
+        const nodeId = document.getElementById('price-node-select').value;
+        priceContainer.innerHTML = '<p>⏳ Cargando catálogo y precios...</p>';
+        document.getElementById('price-actions').style.display = 'none';
+
+        try {
+            const res = await fetch(`/api/prices?node=${nodeId}`);
+            const result = await res.json();
+
+            if (res.ok && result.data) {
+                let html = `
+                    <table class="price-table">
+                        <thead><tr><th>SKU</th><th>Producto</th><th>Precio (USD)</th></tr></thead>
+                        <tbody>
+                `;
+                result.data.forEach(item => {
+                    html += `
+                        <tr>
+                            <td>${item.sku}</td>
+                            <td>${item.name}</td>
+                            <td><input type="number" step="0.01" class="price-input" 
+                                       data-pid="${item.product_id}" value="${item.price}"></td>
+                        </tr>
+                    `;
+                });
+                html += '</tbody></table>';
+                priceContainer.innerHTML = html;
+                document.getElementById('price-actions').style.display = 'block';
+            }
+        } catch (err) { priceContainer.innerHTML = `<p style="color:red;">${err.message}</p>`; }
+    });
+
+    savePricesBtn.addEventListener('click', async () => {
+        const nodeId = document.getElementById('price-node-select').value;
+        const status = document.getElementById('save-status');
+        const inputs = document.querySelectorAll('.price-input');
+        
+        const prices = Array.from(inputs).map(input => ({
+            productId: input.getAttribute('data-pid'),
+            price: input.value
+        }));
+
+        status.innerText = '⏳ Guardando...';
+        status.style.color = 'black';
+
+        try {
+            const res = await fetch('/api/prices', {
+                method: 'POST',
+                body: JSON.stringify({ nodeId, prices }),
+                headers: { 'Content-Type': 'application/json' }
+            });
+            if (res.ok) {
+                status.innerText = '✅ Precios actualizados correctamente.';
+                status.style.color = 'green';
+            }
+        } catch (err) { status.innerText = '❌ Error al guardar.'; status.style.color = 'red'; }
+    });
+}
