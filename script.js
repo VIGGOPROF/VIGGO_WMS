@@ -115,10 +115,13 @@ if (dispatchBtn) {
 }
 
 // ====================================================================
-// MÓDULO 3: DASHBOARD GLOBAL (Grilla Estilo Excel)
+// MÓDULO 3: DASHBOARD GLOBAL (Grilla, Filtros y Excel)
 // ====================================================================
 const dashboardContainer = document.getElementById('dashboard-container');
 const refreshBtn = document.getElementById('refresh-dashboard');
+const searchInput = document.getElementById('dashboard-search');
+const transitCheckbox = document.getElementById('filter-transit');
+const exportBtn = document.getElementById('export-dashboard-btn');
 
 if (dashboardContainer) {
     const loadDashboard = async () => {
@@ -129,25 +132,16 @@ if (dashboardContainer) {
             const result = await res.json();
 
             if (res.ok && result.data) {
-                // 1. Extraer todos los Nodos (Columnas de nuestra tabla)
                 const nodes = Object.keys(result.data);
-                
-                // 2. Agrupar la información por SKU (Filas de nuestra tabla)
                 const productMap = new Map();
 
                 for (const [nodeName, nodeInfo] of Object.entries(result.data)) {
                     nodeInfo.items.forEach(item => {
                         if (!productMap.has(item.sku)) {
-                            // Inicializamos el producto con stock 0 en todos los nodos
                             const defaultStock = {};
                             nodes.forEach(n => defaultStock[n] = { phys: 0, trans: 0 });
-                            
-                            productMap.set(item.sku, { 
-                                name: item.name, 
-                                stock: defaultStock 
-                            });
+                            productMap.set(item.sku, { name: item.name, stock: defaultStock });
                         }
-                        // Actualizamos el stock para este nodo específico
                         productMap.get(item.sku).stock[nodeName] = { 
                             phys: item.physical || 0, 
                             trans: item.transit || 0 
@@ -160,31 +154,29 @@ if (dashboardContainer) {
                     return;
                 }
 
-                // 3. Dibujar la Tabla Estilo Excel
                 let html = '<table class="excel-table"><thead><tr>';
                 html += '<th>SKU</th><th>Producto</th>';
-                // Dibujar encabezados de columnas (Países)
                 nodes.forEach(n => html += `<th>${n}</th>`);
                 html += '</tr></thead><tbody>';
 
-                // Dibujar las filas (Productos)
                 productMap.forEach((data, sku) => {
                     html += `<tr>
                                 <td><strong>${sku}</strong></td>
                                 <td>${data.name}</td>`;
                     
-                    // Rellenar las celdas de stock por cada país
                     nodes.forEach(n => {
                         const stock = data.stock[n];
                         const transHtml = stock.trans > 0 ? `<span class="transit-badge">✈️ +${stock.trans}</span>` : '';
                         html += `<td>${stock.phys} ${transHtml}</td>`;
                     });
-                    
                     html += '</tr>';
                 });
 
                 html += '</tbody></table>';
                 dashboardContainer.innerHTML = html;
+
+                // Re-aplicar filtros inmediatamente después de cargar por si quedó algo escrito/marcado
+                applyFilters();
 
             } else {
                 dashboardContainer.innerHTML = `<p style="color: red;">❌ Error: ${result.error}</p>`;
@@ -194,37 +186,69 @@ if (dashboardContainer) {
         }
     };
 
-    // Cargar al inicio
-    loadDashboard();
+    // --- MOTOR DE FILTRADO COMBINADO ---
+    const applyFilters = () => {
+        const term = (searchInput?.value || '').toLowerCase();
+        const onlyTransit = transitCheckbox?.checked || false;
+        
+        const rows = dashboardContainer.querySelectorAll('tbody tr');
+        rows.forEach(row => {
+            const sku = row.cells[0].textContent.toLowerCase();
+            const name = row.cells[1].textContent.toLowerCase();
+            // Verifica si la fila tiene la etiqueta de tránsito
+            const hasTransit = row.querySelector('.transit-badge') !== null;
+            
+            const matchesSearch = sku.includes(term) || name.includes(term);
+            const matchesTransit = !onlyTransit || hasTransit;
+            
+            if (matchesSearch && matchesTransit) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    };
 
-    // Recargar al hacer clic
-    if (refreshBtn) {
-        refreshBtn.addEventListener('click', loadDashboard);
-    }
-}
+    // Eventos de Filtrado
+    if (searchInput) searchInput.addEventListener('input', applyFilters);
+    if (transitCheckbox) transitCheckbox.addEventListener('change', applyFilters);
 
-// --- LÓGICA DEL BUSCADOR EN VIVO ---
-    const searchInput = document.getElementById('dashboard-search');
-    if (searchInput) {
-        searchInput.addEventListener('input', function() {
-            const term = this.value.toLowerCase();
-            // Seleccionamos todas las filas dentro del tbody del dashboard
-            const rows = dashboardContainer.querySelectorAll('tbody tr');
+    // --- EXPORTACIÓN A EXCEL ---
+    if (exportBtn) {
+        exportBtn.addEventListener('click', () => {
+            let csv = [];
+            // Toma todas las filas de la tabla (incluyendo el header)
+            const rows = dashboardContainer.querySelectorAll('table tr');
             
             rows.forEach(row => {
-                // Buscamos en la columna 1 (SKU) y columna 2 (Nombre)
-                const sku = row.cells[0].textContent.toLowerCase();
-                const name = row.cells[1].textContent.toLowerCase();
-                
-                // Si el término escrito está en el SKU o el Nombre, mostramos la fila, sino la ocultamos
-                if (sku.includes(term) || name.includes(term)) {
-                    row.style.display = '';
-                } else {
-                    row.style.display = 'none';
+                // Solo exporta las filas que están visibles (respeta el buscador)
+                if (row.style.display !== 'none') {
+                    let cols = row.querySelectorAll('td, th');
+                    let rowData = [];
+                    cols.forEach(col => {
+                        // Limpia la celda: quita emojis de avión y saltos de línea para el Excel
+                        let text = col.innerText.replace(/\n/g, ' ').replace(/✈️/g, '').trim();
+                        // Envuelve en comillas por si hay comas en los nombres de productos
+                        rowData.push(`"${text}"`);
+                    });
+                    csv.push(rowData.join(','));
                 }
             });
+
+            // Genera y descarga el archivo CSV
+            const blob = new Blob([csv.join('\n')], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.setAttribute("download", `Inventario_Viiggo_Global.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         });
     }
+
+    loadDashboard();
+    if (refreshBtn) refreshBtn.addEventListener('click', loadDashboard);
+}
 
 // ====================================================================
 // MÓDULO 4: RECEPCIÓN DE MERCADERÍA (Solo se ejecuta si existe el botón)
