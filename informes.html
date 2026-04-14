@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Informes y Analítica | Viiggo WMS</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        @media (max-width: 900px) { .dashboard-grid { grid-template-columns: 1fr; } }
+        
+        .chart-card {
+            background: #ffffff;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        
+        .chart-card h3 { color: var(--primary); font-size: 1.1rem; border-bottom: 2px solid var(--bg-app); padding-bottom: 10px; margin-bottom: 15px; }
+        
+        /* Estilos para el Radar de Alertas */
+        .alerts-container { max-height: 500px; overflow-y: auto; }
+        .alert-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border-left: 4px solid transparent;
+            background: #f8fafc;
+        }
+        .alert-item.critical { border-left-color: #ef4444; background: #fef2f2; }
+        .alert-item.warning { border-left-color: #f59e0b; background: #fffbeb; }
+        
+        .alert-icon { font-size: 1.5rem; }
+        .alert-content h4 { margin: 0 0 4px 0; font-size: 0.95rem; color: var(--text-main); }
+        .alert-content p { margin: 0; font-size: 0.8rem; color: var(--text-muted); }
+        .alert-badge { font-weight: bold; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; }
+        .badge-red { background: #fee2e2; color: #b91c1c; }
+        .badge-yellow { background: #fef3c7; color: #b45309; }
+    </style>
+</head>
+<body>
+
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="brand-logo">V</div>
+            <div class="brand-text"><strong>Usuario: Admin</strong><small>Control Logístico</small></div>
+        </div>
+        <nav class="nav">
+            <a href="dashboard.html"><span class="nav-icon">📊</span> Dashboard</a>
+            <a href="informes.html" class="active"><span class="nav-icon">📈</span> Informes</a>
+            <a href="catalogo.html"><span class="nav-icon">📖</span> Catálogo</a>
+            <a href="index.html"><span class="nav-icon">📦</span> Ingreso (Excel)</a>
+            <a href="distribucion.html"><span class="nav-icon">🚛</span> Distribución</a>
+            <a href="recepcion.html"><span class="nav-icon">📥</span> Recepción</a>
+            <a href="transito.html"><span class="nav-icon">🚢</span> En Tránsito</a>
+            <a href="precios.html"><span class="nav-icon">💰</span> Precios</a>
+            <a href="documentos.html"><span class="nav-icon">📄</span> Documentos</a>
+        </nav>
+    </aside>
+
+    <main class="main-content">
+        <div class="module-container">
+            <header style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h2>Centro de Inteligencia (BI)</h2>
+                    <p>Visualiza la distribución de tu inventario global y recibe alertas automáticas de anomalías.</p>
+                </div>
+                <button onclick="loadReports()" style="background: white; color: var(--primary); border: 1px solid var(--border);">🔄 Actualizar Datos</button>
+            </header>
+
+            <div class="dashboard-grid">
+                <div style="display: flex; flex-direction: column; gap: 20px;">
+                    <div class="chart-card">
+                        <h3>🌍 Volumen de Stock por País / Depósito</h3>
+                        <canvas id="nodeChart" height="100"></canvas>
+                    </div>
+                    <div class="chart-card">
+                        <h3>🏷️ Distribución por Categoría de Producto</h3>
+                        <div style="height: 250px; display: flex; justify-content: center;">
+                            <canvas id="categoryChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chart-card">
+                    <h3>🚨 Radar de Anomalías Automático</h3>
+                    <div class="alerts-container" id="alerts-list">
+                        <p style="text-align: center; color: var(--text-muted); padding: 20px;">Analizando datos...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Variables para guardar las instancias de los gráficos y poder destruirlas al actualizar
+        let nodeChartInstance = null;
+        let categoryChartInstance = null;
+
+        const loadReports = async () => {
+            const alertsList = document.getElementById('alerts-list');
+            try {
+                const res = await fetch('/api/reports');
+                const result = await res.json();
+                
+                if (res.ok && result.data) {
+                    renderNodeChart(result.data.byNode);
+                    renderCategoryChart(result.data.byCategory);
+                    renderAlerts(result.data.alerts);
+                } else {
+                    alertsList.innerHTML = '<p style="color:red; text-align:center;">Error al cargar datos.</p>';
+                }
+            } catch (e) {
+                alertsList.innerHTML = '<p style="color:red; text-align:center;">Error de conexión.</p>';
+            }
+        };
+
+        const renderNodeChart = (data) => {
+            const ctx = document.getElementById('nodeChart').getContext('2d');
+            if (nodeChartInstance) nodeChartInstance.destroy();
+            
+            nodeChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: data.map(d => d.label),
+                    datasets: [{
+                        label: 'Unidades Físicas Totales',
+                        data: data.map(d => d.value),
+                        backgroundColor: 'rgba(37, 99, 235, 0.7)',
+                        borderColor: 'rgba(37, 99, 235, 1)',
+                        borderWidth: 1,
+                        borderRadius: 4
+                    }]
+                },
+                options: { responsive: true, scales: { y: { beginAtZero: true } } }
+            });
+        };
+
+        const renderCategoryChart = (data) => {
+            const ctx = document.getElementById('categoryChart').getContext('2d');
+            if (categoryChartInstance) categoryChartInstance.destroy();
+            
+            nodeChartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: data.map(d => d.label),
+                    datasets: [{
+                        data: data.map(d => d.value),
+                        backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#64748b'],
+                        borderWidth: 0
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right' } } }
+            });
+        };
+
+        const renderAlerts = (alerts) => {
+            const container = document.getElementById('alerts-list');
+            if (alerts.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align:center; padding: 40px 20px; color: var(--success);">
+                        <span style="font-size: 3rem; display:block; margin-bottom:10px;">✅</span>
+                        <strong>Inventario Saludable</strong><br>
+                        <small>No se detectaron quiebres ni excesos de stock.</small>
+                    </div>`;
+                return;
+            }
+
+            container.innerHTML = alerts.map(a => {
+                const isCritical = a.alert_type === 'critical';
+                const icon = isCritical ? '📉' : '📈';
+                const badgeClass = isCritical ? 'badge-red' : 'badge-yellow';
+                const title = isCritical ? 'Quiebre de Stock Inminente' : 'Exceso de Inventario';
+                const message = isCritical 
+                    ? `Solo quedan <strong style="color:#b91c1c;">${a.quantity}</strong> unidades en ${a.node}. Solicitar reposición urgente.`
+                    : `Capital inmovilizado. <strong style="color:#b45309;">${a.quantity}</strong> unidades en ${a.node}. Evaluar promociones.`;
+
+                return `
+                    <div class="alert-item ${a.alert_type}">
+                        <div class="alert-icon">${icon}</div>
+                        <div class="alert-content">
+                            <h4>${a.sku} <span class="alert-badge ${badgeClass}">${title}</span></h4>
+                            <p><strong>${a.name}</strong></p>
+                            <p style="margin-top:5px;">${message}</p>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        };
+
+        // Cargar al iniciar
+        window.onload = loadReports;
+    </script>
+</body>
+</html>
