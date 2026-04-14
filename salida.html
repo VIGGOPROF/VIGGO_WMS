@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Salida de Stock - Viiggo WMS</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="module-container">
+      <h2>Salida de Mercadería (Ventas / Consumo Local)</h2>
+      <p>Registra la salida de stock físico de tu depósito para clientes finales o distribuidores.</p>
+      
+      <div class="form-group">
+        <label>Depósito de Origen (Tu ubicación):</label>
+        <select id="outbound-node">
+          <option value="2">Argentina HQ</option>
+          <option value="3">Paraguay Dist.</option>
+          <option value="4">Chile Filial</option>
+          <option value="1">China Central</option>
+        </select>
+      </div>
+
+      <hr>
+
+      <div class="form-group">
+        <label>SKU del Producto:</label>
+        <input type="text" id="outbound-sku" placeholder="Ej: VIG-CLIP-01">
+      </div>
+      <div class="form-group">
+        <label>Cantidad a Descontar:</label>
+        <input type="number" id="outbound-qty" placeholder="Ej: 10">
+      </div>
+      <div class="form-group">
+        <label>Motivo / Referencia (Ej: Factura #1234, Venta mostrador):</label>
+        <input type="text" id="outbound-ref" placeholder="Opcional">
+      </div>
+
+      <button id="outbound-btn">Registrar Salida de Stock</button>
+      
+      <div id="outbound-status" style="margin-top: 15px; font-weight: bold;"></div>
+    </div>
+
+    <script src="script.js"></script>
+    
+</body>
+</html>
