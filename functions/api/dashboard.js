@@ -2,12 +2,13 @@ export async function onRequestGet(context) {
   try {
     const db = context.env.DB;
 
-    /const { results: nodes } = await db.prepare(`
-    SELECT id, name FROM nodes 
-    ORDER BY display_order ASC
-`).all();
+    // 1. Nodos ordenados por la configuración del Catálogo
+    const { results: nodes } = await db.prepare(`
+        SELECT id, name FROM nodes 
+        ORDER BY display_order ASC
+    `).all();
 
-    // 2. Aquí obtenemos el inventario respetando el Orden de tu Catálogo
+    // 2. Inventario respetando el Orden de tu Catálogo
     const query = `
         SELECT 
             p.sku, 
