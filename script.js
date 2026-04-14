@@ -541,15 +541,25 @@ if (priceLoadBtn) {
             const sheet = workbook.Sheets[workbook.SheetNames[0]];
             const json = XLSX.utils.sheet_to_json(sheet);
             
-            // Mapeamos el excel a la estructura de la tabla
-            const previewData = json.map(row => ({
-                product_id: row.ID || row.id || null, // Si no viene ID, el backend lo buscará por SKU
-                sku: row.SKU || row.sku,
-                name: row.Nombre || row.name || 'Carga desde Excel',
-                price: row.Precio || row.price || 0
-            }));
+            // Mapeo "A prueba de balas" (ignora espacios invisibles y mayúsculas)
+            const previewData = json.map(row => {
+                let sku = '', name = 'Carga desde Excel', price = 0, product_id = null;
+                
+                for (const key in row) {
+                    const k = key.trim().toLowerCase();
+                    if (k === 'sku') sku = row[key].toString().trim();
+                    if (k === 'nombre' || k === 'name' || k === 'producto') name = row[key].toString().trim();
+                    if (k === 'precio' || k === 'price') price = parseFloat(row[key]) || 0;
+                    if (k === 'id') product_id = row[key];
+                }
 
-            renderPriceRows(previewData);
+                return { product_id, sku, name, price };
+            });
+
+            // Filtramos las filas que hayan quedado sin SKU por si el Excel tiene filas en blanco abajo
+            const validData = previewData.filter(item => item.sku !== '');
+
+            renderPriceRows(validData);
             priceStatus.innerHTML = '✨ <span style="color:green;">Excel cargado en la tabla. Revisa y guarda los cambios.</span>';
         };
         reader.readAsArrayBuffer(file);
@@ -770,6 +780,7 @@ window.exportToPDF = (data) => {
     printWindow.document.close();
     setTimeout(() => { printWindow.print(); }, 500);
 };
+
 // ====================================================================
 // UTILIDADES: GESTIÓN DE FÁBRICAS Y AUTOCOMPLETADO DE SKU
 // ====================================================================
