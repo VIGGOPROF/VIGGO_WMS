@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recepción - Viiggo WMS</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .transit-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        .transit-table th, .transit-table td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        .transit-table th { background-color: #f4f4f4; }
+    </style>
+</head>
+<body>
+
+    <div class="module-container">
+      <h2>Recepción de Mercadería (Check-in)</h2>
+      <p>Confirma el ingreso físico de la mercadería que se encuentra en tránsito hacia tu depósito.</p>
+      
+      <div class="form-group">
+        <label>Selecciona tu Depósito (Destino):</label>
+        <select id="recv-node-select">
+          <option value="2">Argentina HQ</option>
+          <option value="3">Paraguay Dist.</option>
+          <option value="4">Chile Filial</option>
+        </select>
+        <button id="search-transit-btn">Buscar Stock en Tránsito</button>
+      </div>
+
+      <hr>
+
+      <div id="transit-results">
+          <p style="color: gray; font-style: italic;">Selecciona un depósito para ver la mercadería en camino.</p>
+      </div>
+    </div>
+
+    <script src="script.js"></script>
+    
+</body>
+</html>
