@@ -1,62 +1,99 @@
 // ====================================================================
-// MÓDULO 1: INGESTA DE EXCEL (Solo se ejecuta si existe el botón)
+// MÓDULO 1: INGRESO HÍBRIDO (Manual + Excel)
 // ====================================================================
-const uploadBtn = document.getElementById('upload-btn');
+const btnManual = document.getElementById('btn-submit-manual');
+const btnExcel = document.getElementById('btn-submit-excel');
+const inboundStatus = document.getElementById('inbound-status');
 
-if (uploadBtn) {
-    uploadBtn.addEventListener('click', async () => {
-        const fileInput = document.getElementById('excel-file');
-        const statusBox = document.getElementById('status-box');
+// Función centralizada para enviar al backend
+async function sendInboundData(nodeId, itemsArray, btnElement) {
+    btnElement.disabled = true;
+    const originalText = btnElement.innerText;
+    btnElement.innerText = '⏳ Procesando...';
+    inboundStatus.innerHTML = '<span style="color:black;">Comunicando con la base de datos...</span>';
 
-        if (!fileInput.files.length) {
-            statusBox.innerText = '⚠️ Por favor, selecciona un archivo Excel primero.';
-            statusBox.style.color = 'red';
+    try {
+        const res = await fetch('/api/inbound', {
+            method: 'POST',
+            body: JSON.stringify({ nodeId: nodeId, items: itemsArray }),
+            headers: { 'Content-Type': 'application/json' }
+        });
+        const result = await res.json();
+
+        if (res.ok) {
+            inboundStatus.innerHTML = `✅ <span style="color:green;">${result.message}</span>`;
+            return true; // Éxito
+        } else {
+            inboundStatus.innerHTML = `❌ <span style="color:red;">Error: ${result.error}</span>`;
+            return false;
+        }
+    } catch (error) {
+        inboundStatus.innerHTML = `❌ <span style="color:red;">Falla de red: ${error.message}</span>`;
+        return false;
+    } finally {
+        btnElement.disabled = false;
+        btnElement.innerText = originalText;
+    }
+}
+
+// Evento: Carga Manual
+if (btnManual) {
+    btnManual.addEventListener('click', async () => {
+        const nodeId = document.getElementById('inbound-node').value;
+        const sku = document.getElementById('man-sku').value;
+        const name = document.getElementById('man-name').value;
+        const cat = document.getElementById('man-cat').value;
+        const fab = document.getElementById('man-fab').value;
+        const qty = document.getElementById('man-qty').value;
+
+        if (!sku || !qty) {
+            inboundStatus.innerHTML = '⚠️ <span style="color:red;">El SKU y la Cantidad son obligatorios.</span>';
             return;
         }
 
-        const file = fileInput.files[0];
+        const items = [{ sku: sku, name: name, category: cat, factory: fab, qty: qty }];
+        
+        const success = await sendInboundData(nodeId, items, btnManual);
+        if (success) {
+            // Limpiar formulario si fue exitoso
+            document.getElementById('man-sku').value = '';
+            document.getElementById('man-qty').value = '';
+        }
+    });
+}
+
+// Evento: Carga Excel
+if (btnExcel) {
+    btnExcel.addEventListener('click', async () => {
+        const nodeId = document.getElementById('inbound-node').value;
+        const fileInput = document.getElementById('excel-file');
+
+        if (!fileInput.files.length) {
+            inboundStatus.innerHTML = '⚠️ <span style="color:red;">Selecciona un archivo Excel primero.</span>';
+            return;
+        }
+
         const reader = new FileReader();
-
         reader.onload = async (e) => {
-            statusBox.innerText = '⏳ Leyendo Excel...';
-            statusBox.style.color = 'black';
-
             const data = new Uint8Array(e.target.result);
             const workbook = XLSX.read(data, { type: 'array' });
             const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
             const jsonData = XLSX.utils.sheet_to_json(firstSheet);
 
             if (jsonData.length === 0) {
-                statusBox.innerText = '⚠️ El Excel está vacío.';
+                inboundStatus.innerHTML = '⚠️ <span style="color:red;">El Excel parece estar vacío.</span>';
                 return;
             }
 
-            statusBox.innerText = `🚀 Enviando ${jsonData.length} productos a la base de datos...`;
-
-            try {
-                const res = await fetch('/api/ingest', {
-                    method: 'POST',
-                    body: JSON.stringify(jsonData),
-                    headers: { 'Content-Type': 'application/json' }
-                });
-
-                const result = await res.json();
-
-                if (res.ok) {
-                    statusBox.innerText = `✅ Éxito: ${result.message}`;
-                    statusBox.style.color = 'green';
-                    fileInput.value = ''; // Limpiar el input
-                } else {
-                    statusBox.innerText = `❌ Error del servidor: ${result.error}`;
-                    statusBox.style.color = 'red';
-                }
-            } catch (error) {
-                statusBox.innerText = `❌ Error de conexión: ${error.message}`;
-                statusBox.style.color = 'red';
+            const success = await sendInboundData(nodeId, jsonData, btnExcel);
+            if (success) {
+                // Resetear el visual de subida
+                document.getElementById('drop-zone').style.display = 'block';
+                document.getElementById('file-info').style.display = 'none';
+                fileInput.value = '';
             }
         };
-
-        reader.readAsArrayBuffer(file);
+        reader.readAsArrayBuffer(fileInput.files[0]);
     });
 }
 
