@@ -862,3 +862,48 @@ if (manSkuInput) {
         setTimeout(() => { skuHelper.style.display = 'none'; }, 3000);
     });
 }
+
+const loadNodes = async () => {
+    const container = document.getElementById('node-list-container');
+    if (!container) return;
+    const res = await fetch('/api/nodes');
+    const result = await res.json();
+    if (res.ok) {
+        container.innerHTML = result.data.map(n => `
+            <div class="factory-item">
+                <span><strong>[${n.display_order}]</strong> ${n.name}</span>
+                <div>
+                    <button class="action-btn" onclick="editNode(${n.id}, '${n.name}', ${n.display_order})">✏️</button>
+                    <button class="action-btn delete" onclick="deleteNode(${n.id})">🗑️</button>
+                </div>
+            </div>
+        `).join('');
+    }
+};
+
+window.editNode = async (id, oldName, oldOrder) => {
+    const name = prompt("Nombre del depósito:", oldName);
+    const order = prompt("Orden en el dashboard:", oldOrder);
+    if (name && order) {
+        await fetch('/api/nodes', { 
+            method: 'PUT', 
+            body: JSON.stringify({ id, name, order: parseInt(order) }), 
+            headers: {'Content-Type': 'application/json'} 
+        });
+        loadNodes();
+    }
+};
+
+document.getElementById('btn-add-node')?.addEventListener('click', async () => {
+    const name = document.getElementById('node-name-input').value;
+    const order = document.getElementById('node-order-input').value;
+    await fetch('/api/nodes', { 
+        method: 'POST', 
+        body: JSON.stringify({ name, order: parseInt(order) }), 
+        headers: {'Content-Type': 'application/json'} 
+    });
+    loadNodes();
+});
+
+// Inicializar
+loadNodes();
