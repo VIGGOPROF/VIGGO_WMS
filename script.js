@@ -115,55 +115,77 @@ if (dispatchBtn) {
 }
 
 // ====================================================================
-// MÓDULO 3: DASHBOARD GLOBAL (Solo se ejecuta si existe el contenedor)
+// MÓDULO 3: DASHBOARD GLOBAL (Grilla Estilo Excel)
 // ====================================================================
 const dashboardContainer = document.getElementById('dashboard-container');
 const refreshBtn = document.getElementById('refresh-dashboard');
 
 if (dashboardContainer) {
     const loadDashboard = async () => {
-        dashboardContainer.innerHTML = '<p>⏳ Consultando base de datos global...</p>';
+        dashboardContainer.innerHTML = '<p>⏳ Consultando matriz global...</p>';
         
         try {
             const res = await fetch('/api/dashboard');
             const result = await res.json();
 
             if (res.ok && result.data) {
-                dashboardContainer.innerHTML = ''; // Limpiamos el contenedor
+                // 1. Extraer todos los Nodos (Columnas de nuestra tabla)
+                const nodes = Object.keys(result.data);
                 
-                // Recorremos cada país (nodo) que nos devolvió la API
-                for (const [nodeName, nodeInfo] of Object.entries(result.data)) {
-                    
-                    let itemsHtml = '';
-                    if (nodeInfo.items.length === 0) {
-                        itemsHtml = '<p style="color: gray; font-style: italic;">Sin stock registrado</p>';
-                    } else {
-                        nodeInfo.items.forEach(item => {
-                            // Mostrar tránsito solo si hay mercadería viajando
-                            const transitBadge = item.transit > 0 
-                                ? `<span class="stock-transit">(+${item.transit} en camino)</span>` 
-                                : '';
-                                
-                            itemsHtml += `
-                                <div class="stock-item">
-                                    <span><strong>${item.sku}</strong> - ${item.name}</span>
-                                    <span>Físico: <strong>${item.physical}</strong> ${transitBadge}</span>
-                                </div>
-                            `;
-                        });
-                    }
+                // 2. Agrupar la información por SKU (Filas de nuestra tabla)
+                const productMap = new Map();
 
-                    // Construir la tarjeta del País
-                    const cardHtml = `
-                        <div class="node-card">
-                            <h3>🌎 ${nodeName} (${nodeInfo.code})</h3>
-                            <div class="card-content">
-                                ${itemsHtml}
-                            </div>
-                        </div>
-                    `;
-                    dashboardContainer.innerHTML += cardHtml;
+                for (const [nodeName, nodeInfo] of Object.entries(result.data)) {
+                    nodeInfo.items.forEach(item => {
+                        if (!productMap.has(item.sku)) {
+                            // Inicializamos el producto con stock 0 en todos los nodos
+                            const defaultStock = {};
+                            nodes.forEach(n => defaultStock[n] = { phys: 0, trans: 0 });
+                            
+                            productMap.set(item.sku, { 
+                                name: item.name, 
+                                stock: defaultStock 
+                            });
+                        }
+                        // Actualizamos el stock para este nodo específico
+                        productMap.get(item.sku).stock[nodeName] = { 
+                            phys: item.physical || 0, 
+                            trans: item.transit || 0 
+                        };
+                    });
                 }
+
+                if (productMap.size === 0) {
+                    dashboardContainer.innerHTML = '<p style="color: gray;">Sin stock registrado en el sistema.</p>';
+                    return;
+                }
+
+                // 3. Dibujar la Tabla Estilo Excel
+                let html = '<table class="excel-table"><thead><tr>';
+                html += '<th>SKU</th><th>Producto</th>';
+                // Dibujar encabezados de columnas (Países)
+                nodes.forEach(n => html += `<th>${n}</th>`);
+                html += '</tr></thead><tbody>';
+
+                // Dibujar las filas (Productos)
+                productMap.forEach((data, sku) => {
+                    html += `<tr>
+                                <td><strong>${sku}</strong></td>
+                                <td>${data.name}</td>`;
+                    
+                    // Rellenar las celdas de stock por cada país
+                    nodes.forEach(n => {
+                        const stock = data.stock[n];
+                        const transHtml = stock.trans > 0 ? `<span class="transit-badge">✈️ +${stock.trans}</span>` : '';
+                        html += `<td>${stock.phys} ${transHtml}</td>`;
+                    });
+                    
+                    html += '</tr>';
+                });
+
+                html += '</tbody></table>';
+                dashboardContainer.innerHTML = html;
+
             } else {
                 dashboardContainer.innerHTML = `<p style="color: red;">❌ Error: ${result.error}</p>`;
             }
@@ -172,10 +194,10 @@ if (dashboardContainer) {
         }
     };
 
-    // Cargar al abrir la página
+    // Cargar al inicio
     loadDashboard();
 
-    // Recargar al presionar el botón
+    // Recargar al hacer clic
     if (refreshBtn) {
         refreshBtn.addEventListener('click', loadDashboard);
     }
