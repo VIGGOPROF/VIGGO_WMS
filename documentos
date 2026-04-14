@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Documentación - Viiggo WMS</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="module-container">
+      <h2>Generador de Proformas y Documentos</h2>
+      <p>Selecciona una transferencia reciente para generar la documentación legal.</p>
+      
+      <div class="form-group">
+        <label>Filtrar por Destino:</label>
+        <select id="doc-node-select">
+          <option value="2">Argentina HQ</option>
+          <option value="3">Paraguay Dist.</option>
+          <option value="4">Chile Filial</option>
+        </select>
+        <button id="load-transfers-btn">Buscar Transferencias</button>
+      </div>
+
+      <hr>
+
+      <div id="docs-list-container">
+          <p style="color: gray; font-style: italic;">Busca transferencias para generar documentos.</p>
+      </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
