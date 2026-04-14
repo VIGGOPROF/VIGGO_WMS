@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Precios - Viiggo WMS</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .price-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        .price-table th, .price-table td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        .price-table th { background-color: #f4f4f4; }
+        .price-input { width: 80px; padding: 5px; text-align: right; }
+    </style>
+</head>
+<body>
+
+    <div class="module-container">
+      <h2>Gestor de Listas de Precios por País</h2>
+      <p>Configura cuánto se factura a cada país de destino por cada producto.</p>
+      
+      <div class="form-group">
+        <label>Selecciona País / Lista:</label>
+        <select id="price-node-select">
+          <option value="2">Argentina HQ</option>
+          <option value="3">Paraguay Dist.</option>
+          <option value="4">Chile Filial</option>
+        </select>
+        <button id="load-prices-btn">Cargar Lista</button>
+      </div>
+
+      <hr>
+
+      <div id="price-list-container">
+          <p style="color: gray; font-style: italic;">Selecciona una lista para comenzar a editar.</p>
+      </div>
+
+      <div id="price-actions" style="display:none; margin-top: 20px;">
+          <button id="save-prices-btn" style="background-color: #27ae60; color: white;">Guardar Cambios en la Lista</button>
+          <span id="save-status" style="margin-left: 15px; font-weight: bold;"></span>
+      </div>
+    </div>
+
+    <script src="script.js"></script>
+    
+</body>
+</html>
