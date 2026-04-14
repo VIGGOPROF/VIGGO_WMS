@@ -278,3 +278,56 @@ if (searchTransitBtn) {
         }
     });
 }
+
+// ====================================================================
+// MÓDULO 5: SALIDA DE STOCK (Solo se ejecuta si existe el botón)
+// ====================================================================
+const outboundBtn = document.getElementById('outbound-btn');
+
+if (outboundBtn) {
+    outboundBtn.addEventListener('click', async () => {
+        const nodeId = document.getElementById('outbound-node').value;
+        const sku = document.getElementById('outbound-sku').value;
+        const qty = parseInt(document.getElementById('outbound-qty').value);
+        const ref = document.getElementById('outbound-ref').value;
+        const statusBox = document.getElementById('outbound-status');
+
+        if (!sku || !qty || qty <= 0) {
+            statusBox.innerText = '⚠️ Ingresa un SKU válido y una cantidad mayor a cero.';
+            statusBox.style.color = 'red';
+            return;
+        }
+
+        statusBox.innerText = '⏳ Procesando salida de stock...';
+        statusBox.style.color = 'black';
+        outboundBtn.disabled = true;
+
+        try {
+            const res = await fetch('/api/outbound', {
+                method: 'POST',
+                // Enviamos los datos, incluyendo la referencia por si a futuro armamos un historial
+                body: JSON.stringify({ nodeId, sku, qty, ref }),
+                headers: { 'Content-Type': 'application/json' }
+            });
+
+            const result = await res.json();
+
+            if (res.ok) {
+                statusBox.innerText = `✅ ${result.message}`;
+                statusBox.style.color = 'green';
+                // Limpiar campos
+                document.getElementById('outbound-sku').value = '';
+                document.getElementById('outbound-qty').value = '';
+                document.getElementById('outbound-ref').value = '';
+            } else {
+                statusBox.innerText = `❌ Error: ${result.error}`;
+                statusBox.style.color = 'red';
+            }
+        } catch (error) {
+            statusBox.innerText = `❌ Error de conexión: ${error.message}`;
+            statusBox.style.color = 'red';
+        } finally {
+            outboundBtn.disabled = false;
+        }
+    });
+}
