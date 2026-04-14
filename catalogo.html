@@ -7,14 +7,92 @@
     <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
     <link rel="stylesheet" href="style.css">
     <style>
-        .grid-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
-        @media (max-width: 768px) { .grid-2col { grid-template-columns: 1fr; } }
-        .factory-list { max-height: 300px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; background: white; }
-        .factory-item { display: flex; justify-content: space-between; padding: 10px 15px; border-bottom: 1px solid var(--border); }
-        .factory-item:last-child { border-bottom: none; }
-        .action-btn { background: transparent !important; color: var(--text-muted) !important; padding: 5px !important; box-shadow: none !important; border-radius: 4px; }
-        .action-btn:hover { background: #f1f5f9 !important; color: var(--primary) !important; }
-        .action-btn.delete:hover { color: var(--danger) !important; }
+        /* Diseño de rejilla para los 3 bloques administrativos */
+        .admin-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin-top: 20px;
+        }
+
+        .admin-card {
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 25px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .admin-card h3 {
+            font-size: 1.1rem;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 10px;
+            margin-bottom: 10px;
+        }
+
+        /* Lista de elementos (Fábricas / Nodos) */
+        .item-list {
+            max-height: 250px;
+            overflow-y: auto;
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+        }
+
+        .list-entry {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 15px;
+            border-bottom: 1px solid var(--bg-app);
+            font-size: 0.9rem;
+        }
+
+        .list-entry:last-child { border-bottom: none; }
+        .list-entry:hover { background: #f1f5f9; }
+
+        .list-entry .actions { display: flex; gap: 5px; }
+
+        /* Botones de acción minimalistas */
+        .action-btn {
+            background: transparent !important;
+            color: var(--text-muted) !important;
+            padding: 6px !important;
+            box-shadow: none !important;
+            border-radius: 6px;
+            border: 1px solid transparent !important;
+        }
+        .action-btn:hover {
+            background: #e2e8f0 !important;
+            color: var(--primary) !important;
+        }
+        .action-btn.delete:hover {
+            color: var(--danger) !important;
+            background: #fee2e2 !important;
+        }
+
+        /* Zona de carga Excel */
+        .upload-area {
+            border: 2px dashed #cbd5e1;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            background: white;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .upload-area:hover { border-color: var(--accent); background: #eff6ff; }
+        .upload-icon { font-size: 2rem; display: block; margin-bottom: 10px; }
+
+        /* Corrección de color en botones de pestañas si se usaran */
+        .tab-btn { color: #64748b !important; background: transparent !important; }
+        .tab-btn.active { color: #2563eb !important; border-bottom: 3px solid #2563eb !important; }
     </style>
 </head>
 <body>
@@ -37,73 +115,82 @@
     </aside>
 
     <main class="main-content">
-        <div class="module-container" style="max-width: 1000px;">
+        <div class="module-container">
             <header>
-                <h2>Catálogo Maestro y Fábricas</h2>
-                <p>Administra la base de datos de SKUs, asigna el orden de visualización y gestiona los nombres de las fábricas.</p>
+                <h2>Catálogo Maestro e Infraestructura</h2>
+                <p>Configura la base de datos de productos, gestiona fábricas y define el orden de tus depósitos en el Dashboard.</p>
             </header>
 
-            <div class="grid-2col">
-                <div style="background: #f8fafc; padding: 20px; border-radius: 10px; border: 1px solid var(--border);">
-                    <h3 style="margin-bottom: 15px; color: var(--primary); font-size: 1.1rem;">🏭 Gestión de Fábricas</h3>
-                    <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-                        <input type="text" id="new-factory-input" placeholder="Nueva fábrica..." style="flex: 1;">
-                        <button id="btn-add-fac" style="padding: 10px 15px;">Añadir</button>
+            <div class="admin-grid">
+                
+                <div class="admin-card">
+                    <h3><span>🏭</span> Fábricas</h3>
+                    <div style="display: flex; gap: 8px;">
+                        <input type="text" id="factory-input" placeholder="Nombre de fábrica...">
+                        <button id="add-factory-btn" style="padding: 10px;">+</button>
                     </div>
-                    <div class="factory-list" id="factory-list-container">
-                        <p style="padding: 15px; text-align: center; color: var(--text-muted);">Cargando fábricas...</p>
+                    <div class="item-list" id="factory-list">
+                        <p style="padding: 20px; text-align: center; color: var(--text-muted);">Cargando...</p>
                     </div>
                 </div>
 
-                <div style="background: #f8fafc; padding: 20px; border-radius: 10px; border: 1px solid var(--border);">
-                    <h3 style="margin-bottom: 15px; color: var(--primary); font-size: 1.1rem;">📑 Carga de Catálogo (Excel)</h3>
-                    <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">
-                        Columnas: <strong>SKU | Nombre | Categoria | Fabrica | Orden</strong><br>
-                        <small><em>*El 'Orden' es un número (ej. 1, 2, 3) que dictará cómo se muestra el producto en los reportes.</em></small>
-                    </p>
+                <div class="admin-card">
+                    <h3><span>🏢</span> Depósitos / Nodos</h3>
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                        <input type="text" id="node-name-input" placeholder="Nombre (ej: Chile Filial)">
+                        <input type="number" id="node-order-input" placeholder="Prioridad (1, 2, 3...)">
+                        <button id="add-node-btn" style="width: 100%;">Registrar Depósito</button>
+                    </div>
+                    <div class="item-list" id="node-list">
+                        <p style="padding: 20px; text-align: center; color: var(--text-muted);">Cargando...</p>
+                    </div>
+                </div>
+
+                <div class="admin-card">
+                    <h3><span>📑</span> Catálogo (Excel)</h3>
+                    <p style="font-size: 0.8rem; color: var(--text-muted);">Columnas: SKU | Nombre | Categoria | Fabrica | Orden</p>
                     
-                    <label class="upload-area" id="cat-drop-zone" for="cat-excel-file" style="margin-bottom: 15px;">
+                    <label class="upload-area" for="catalog-file" id="drop-zone">
                         <span class="upload-icon">📄</span>
-                        <div class="upload-text">Arrastra el Excel del Catálogo aquí</div>
-                        <input type="file" id="cat-excel-file" accept=".xlsx, .xls" style="display:none;" />
+                        <div style="font-size: 0.9rem; font-weight: 500;">Arrastra el Excel aquí</div>
+                        <input type="file" id="catalog-file" accept=".xlsx, .xls" style="display:none;">
                     </label>
-                    <div id="cat-file-info" class="file-info" style="margin-bottom: 15px;">
-                        <span>📎</span><span id="cat-file-name">Ningún archivo</span>
+
+                    <div id="file-ready" style="display: none; font-size: 0.85rem; background: white; padding: 10px; border-radius: 6px; border: 1px solid var(--border);">
+                        📎 <span id="file-name-text">archivo.xlsx</span>
                     </div>
 
-                    <button id="btn-upload-catalog" style="width: 100%;">Actualizar Base de Datos</button>
-                    <div id="cat-status" style="margin-top: 15px; text-align: center; font-weight: 500;"></div>
+                    <button id="upload-catalog-btn" style="width: 100%;" disabled>Actualizar Base de SKUs</button>
+                    <div id="catalog-status" style="margin-top: 10px; font-size: 0.9rem; text-align: center;"></div>
                 </div>
+
             </div>
         </div>
     </main>
 
     <script>
-        // 1. GESTIÓN DE FÁBRICAS
+        // --- 1. LÓGICA DE FÁBRICAS ---
         const loadFactories = async () => {
-            const container = document.getElementById('factory-list-container');
+            const list = document.getElementById('factory-list');
             try {
                 const res = await fetch('/api/factories');
                 const result = await res.json();
-                if (res.ok && result.data.length > 0) {
-                    container.innerHTML = '';
-                    result.data.forEach(f => {
-                        container.innerHTML += `
-                            <div class="factory-item">
-                                <span id="fac-name-${f.id}">${f.name}</span>
-                                <div>
-                                    <button class="action-btn" onclick="editFactory(${f.id}, '${f.name}')">✏️</button>
-                                    <button class="action-btn delete" onclick="deleteFactory(${f.id})">🗑️</button>
-                                </div>
+                if (res.ok && result.data) {
+                    list.innerHTML = result.data.map(f => `
+                        <div class="list-entry">
+                            <span>${f.name}</span>
+                            <div class="actions">
+                                <button class="action-btn" onclick="editFactory(${f.id}, '${f.name}')">✏️</button>
+                                <button class="action-btn delete" onclick="deleteFactory(${f.id})">🗑️</button>
                             </div>
-                        `;
-                    });
-                } else { container.innerHTML = '<p style="padding: 15px;">No hay fábricas.</p>'; }
-            } catch (e) { container.innerHTML = '<p style="color:red; padding: 15px;">Error al cargar.</p>'; }
+                        </div>
+                    `).join('');
+                }
+            } catch (e) { list.innerHTML = '<p style="padding:10px; color:red;">Error.</p>'; }
         };
 
-        document.getElementById('btn-add-fac').addEventListener('click', async () => {
-            const input = document.getElementById('new-factory-input');
+        document.getElementById('add-factory-btn').addEventListener('click', async () => {
+            const input = document.getElementById('factory-input');
             if (!input.value.trim()) return;
             await fetch('/api/factories', { method: 'POST', body: JSON.stringify({ name: input.value }), headers: {'Content-Type': 'application/json'} });
             input.value = '';
@@ -111,39 +198,83 @@
         });
 
         window.editFactory = async (id, oldName) => {
-            const newName = prompt("Editar nombre:", oldName);
-            if (newName && newName.trim() !== oldName) {
-                await fetch('/api/factories', { method: 'PUT', body: JSON.stringify({ id, name: newName }), headers: {'Content-Type': 'application/json'} });
+            const name = prompt("Nuevo nombre de la fábrica:", oldName);
+            if (name && name.trim() !== oldName) {
+                await fetch('/api/factories', { method: 'PUT', body: JSON.stringify({ id, name }), headers: {'Content-Type': 'application/json'} });
                 loadFactories();
             }
         };
 
         window.deleteFactory = async (id) => {
-            if (confirm("¿Seguro que deseas borrar esta fábrica?")) {
+            if (confirm("¿Borrar fábrica? Esta acción fallará si hay productos asociados.")) {
                 await fetch(`/api/factories?id=${id}`, { method: 'DELETE' });
                 loadFactories();
             }
         };
 
-        loadFactories();
+        // --- 2. LÓGICA DE DEPÓSITOS (NODOS) ---
+        const loadNodes = async () => {
+            const list = document.getElementById('node-list');
+            try {
+                const res = await fetch('/api/nodes');
+                const result = await res.json();
+                if (res.ok && result.data) {
+                    list.innerHTML = result.data.map(n => `
+                        <div class="list-entry">
+                            <span><strong>[${n.display_order}]</strong> ${n.name}</span>
+                            <div class="actions">
+                                <button class="action-btn" onclick="editNode(${n.id}, '${n.name}', ${n.display_order})">✏️</button>
+                                <button class="action-btn delete" onclick="deleteNode(${n.id})">🗑️</button>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            } catch (e) { list.innerHTML = '<p style="padding:10px; color:red;">Error.</p>'; }
+        };
 
-        // 2. CARGA DEL EXCEL
-        const fileInput = document.getElementById('cat-excel-file');
-        const uploadBtn = document.getElementById('btn-upload-catalog');
-        const statusBox = document.getElementById('cat-status');
+        document.getElementById('add-node-btn').addEventListener('click', async () => {
+            const name = document.getElementById('node-name-input').value;
+            const order = document.getElementById('node-order-input').value;
+            if (!name) return;
+            await fetch('/api/nodes', { method: 'POST', body: JSON.stringify({ name, order }), headers: {'Content-Type': 'application/json'} });
+            document.getElementById('node-name-input').value = '';
+            document.getElementById('node-order-input').value = '';
+            loadNodes();
+        });
 
-        fileInput.addEventListener('change', (e) => {
+        window.editNode = async (id, oldName, oldOrder) => {
+            const name = prompt("Nombre del depósito:", oldName);
+            const order = prompt("Prioridad de visualización:", oldOrder);
+            if (name && order) {
+                await fetch('/api/nodes', { method: 'PUT', body: JSON.stringify({ id, name, order }), headers: {'Content-Type': 'application/json'} });
+                loadNodes();
+            }
+        };
+
+        window.deleteNode = async (id) => {
+            if (confirm("¿Eliminar este depósito?")) {
+                await fetch(`/api/nodes?id=${id}`, { method: 'DELETE' });
+                loadNodes();
+            }
+        };
+
+        // --- 3. LÓGICA DE CATÁLOGO EXCEL ---
+        const catalogFile = document.getElementById('catalog-file');
+        const uploadBtn = document.getElementById('upload-catalog-btn');
+
+        catalogFile.addEventListener('change', (e) => {
             if (e.target.files.length > 0) {
-                document.getElementById('cat-file-name').innerText = e.target.files[0].name;
-                document.getElementById('cat-file-info').style.display = 'flex';
-                document.getElementById('cat-drop-zone').style.display = 'none';
+                document.getElementById('file-name-text').innerText = e.target.files[0].name;
+                document.getElementById('file-ready').style.display = 'block';
+                document.getElementById('drop-zone').style.display = 'none';
+                uploadBtn.disabled = false;
             }
         });
 
         uploadBtn.addEventListener('click', () => {
-            if (!fileInput.files.length) { statusBox.innerHTML = '<span style="color:red;">Selecciona un Excel.</span>'; return; }
             const reader = new FileReader();
-            statusBox.innerHTML = '⏳ Procesando...';
+            const status = document.getElementById('catalog-status');
+            status.innerHTML = '⏳ Procesando catálogo...';
             uploadBtn.disabled = true;
 
             reader.onload = async (e) => {
@@ -153,16 +284,18 @@
 
                 try {
                     const res = await fetch('/api/catalog', { method: 'POST', body: JSON.stringify({ items: jsonData }), headers: {'Content-Type': 'application/json'} });
-                    const result = await res.json();
                     if (res.ok) {
-                        statusBox.innerHTML = `✅ <span style="color:green;">${result.message}</span>`;
-                        setTimeout(loadFactories, 1000); // Recarga fábricas por si se crearon nuevas
-                    } else { statusBox.innerHTML = `❌ <span style="color:red;">Error: ${result.error}</span>`; }
-                } catch (err) { statusBox.innerHTML = `❌ <span style="color:red;">Error de red.</span>`; }
-                uploadBtn.disabled = false;
+                        status.innerHTML = '✅ Base de SKUs actualizada.';
+                        setTimeout(() => location.reload(), 1500);
+                    } else { status.innerHTML = '❌ Error al procesar.'; }
+                } catch (err) { status.innerHTML = '❌ Error de red.'; }
             };
-            reader.readAsArrayBuffer(fileInput.files[0]);
+            reader.readAsArrayBuffer(catalogFile.files[0]);
         });
+
+        // Inicialización
+        loadFactories();
+        loadNodes();
     </script>
 </body>
 </html>
