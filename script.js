@@ -768,3 +768,97 @@ window.exportToPDF = (data) => {
     printWindow.document.close();
     setTimeout(() => { printWindow.print(); }, 500);
 };
+// ====================================================================
+// UTILIDADES: GESTIÓN DE FÁBRICAS Y AUTOCOMPLETADO DE SKU
+// ====================================================================
+const manSkuInput = document.getElementById('man-sku');
+const manFabSelect = document.getElementById('man-fab');
+const btnAddFactory = document.getElementById('btn-add-factory');
+const skuHelper = document.getElementById('sku-helper');
+
+// 1. Cargar las fábricas en el select al abrir la página
+const loadFactories = async () => {
+    if (!manFabSelect) return;
+    try {
+        const res = await fetch('/api/factories');
+        const result = await res.json();
+        if (res.ok && result.data) {
+            // Guardamos la opción seleccionada actualmente si existe
+            const currentVal = manFabSelect.value;
+            manFabSelect.innerHTML = '<option value="">Seleccione una fábrica...</option>';
+            result.data.forEach(f => {
+                manFabSelect.innerHTML += `<option value="${f.name}">${f.name}</option>`;
+            });
+            if (currentVal) manFabSelect.value = currentVal;
+        }
+    } catch (e) { console.error('Error cargando fábricas'); }
+};
+
+if (manFabSelect) loadFactories();
+
+// 2. Crear nueva fábrica
+if (btnAddFactory) {
+    btnAddFactory.addEventListener('click', async (e) => {
+        e.preventDefault();
+        const newFactory = prompt("Ingresa el nombre exacto de la nueva fábrica (Ej: Yiwu Electronics):");
+        if (!newFactory || newFactory.trim() === "") return;
+
+        try {
+            const res = await fetch('/api/factories', {
+                method: 'POST',
+                body: JSON.stringify({ name: newFactory }),
+                headers: { 'Content-Type': 'application/json' }
+            });
+            if (res.ok) {
+                alert(`✅ Fábrica "${newFactory}" agregada con éxito.`);
+                await loadFactories();
+                manFabSelect.value = newFactory.trim();
+            } else {
+                const err = await res.json();
+                alert(`❌ Error: ${err.error}`);
+            }
+        } catch (e) { alert("Error de conexión"); }
+    });
+}
+
+// 3. Autocompletado al escribir el SKU
+if (manSkuInput) {
+    // Evento "blur" se dispara cuando el usuario sale de la caja de texto del SKU
+    manSkuInput.addEventListener('blur', async () => {
+        const sku = manSkuInput.value.trim();
+        if (!sku) return;
+
+        skuHelper.style.display = 'block';
+        skuHelper.innerText = 'Buscando datos del producto...';
+
+        try {
+            const res = await fetch(`/api/product?sku=${encodeURIComponent(sku)}`);
+            const result = await res.json();
+
+            if (res.ok && result.data) {
+                skuHelper.innerText = '✅ Artículo encontrado. Autocompletado.';
+                skuHelper.style.color = 'green';
+                
+                // Rellenar campos
+                document.getElementById('man-name').value = result.data.name || '';
+                document.getElementById('man-cat').value = result.data.category || '';
+                
+                // Si la fábrica existe en nuestro select, la marcamos
+                if (result.data.factory_name) {
+                    const exists = Array.from(manFabSelect.options).some(opt => opt.value === result.data.factory_name);
+                    if (exists) {
+                        manFabSelect.value = result.data.factory_name;
+                    }
+                }
+            } else {
+                skuHelper.innerText = '✨ Nuevo artículo (No registrado)';
+                skuHelper.style.color = 'var(--text-muted)';
+            }
+        } catch (e) {
+            skuHelper.style.display = 'none';
+        }
+        
+        // Ocultar el mensaje de ayuda después de 3 segundos
+        setTimeout(() => { skuHelper.style.display = 'none'; }, 3000);
+    });
+}
