@@ -1,21 +1,44 @@
+/* Importamos la fuente Inter de Google, el estándar actual para SaaS */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+    --bg-app: #f4f7f6;        /* Fondo general de la app (Gris muy claro) */
+    --bg-card: #ffffff;       /* Fondo de los módulos */
+    --primary: #0f172a;       /* Pizarra oscuro (Casi negro) para botones y títulos */
+    --accent: #2563eb;        /* Azul vibrante para resaltados y focus */
+    --text-main: #334155;     /* Texto principal */
+    --text-muted: #64748b;    /* Texto secundario/explicativo */
+    --border: #e2e8f0;        /* Color de las líneas divisorias */
+    --success: #10b981;       /* Verde para confirmaciones */
+    --danger: #ef4444;        /* Rojo para errores */
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
 /* =========================================
    LAYOUT PRINCIPAL Y SIDEBAR INAMOVIBLE
    ========================================= */
 body {
+    font-family: 'Inter', sans-serif;
     display: flex;
     justify-content: flex-start;
     padding: 0;
     margin: 0;
     height: 100vh;
-    background-color: #f4f7f6;
-    overflow: hidden; /* Evita el scroll global, lo hacemos por área */
+    background-color: var(--bg-app);
+    color: var(--text-main);
+    overflow: hidden; /* Evita el scroll global de la ventana */
 }
 
 .sidebar {
     width: 260px;
     min-width: 260px;
     background-color: #ffffff;
-    border-right: 1px solid #e2e8f0;
+    border-right: 1px solid var(--border);
     display: flex;
     flex-direction: column;
     height: 100vh;
@@ -26,11 +49,11 @@ body {
     display: flex;
     align-items: center;
     gap: 15px;
-    border-bottom: 1px solid #e2e8f0;
+    border-bottom: 1px solid var(--border);
 }
 
 .brand-logo {
-    background: #0f172a;
+    background: var(--primary);
     color: white;
     width: 40px;
     height: 40px;
@@ -47,8 +70,8 @@ body {
     flex-direction: column;
 }
 
-.brand-text strong { color: #0f172a; font-size: 0.95rem; }
-.brand-text small { color: #64748b; font-size: 0.8rem; }
+.brand-text strong { color: var(--primary); font-size: 0.95rem; }
+.brand-text small { color: var(--text-muted); font-size: 0.8rem; }
 
 .nav {
     padding: 20px 10px;
@@ -59,7 +82,7 @@ body {
 
 .nav a {
     text-decoration: none;
-    color: #334155;
+    color: var(--text-main);
     padding: 10px 15px;
     border-radius: 6px;
     display: flex;
@@ -71,63 +94,87 @@ body {
 
 .nav a:hover, .nav a .active {
     background-color: #f1f5f9;
-    color: #2563eb;
+    color: var(--accent);
 }
 
 .main-content {
     flex: 1;
     padding: 30px;
-    overflow-y: auto; /* Scroll solo en el área de trabajo */
-}
-
-/* Para que la tabla entre bien, el contenedor debe ser más ancho */
-.module-container {
-    max-width: 100%;
+    overflow-y: auto; /* Permite hacer scroll vertical solo en el área de trabajo */
 }
 
 /* =========================================
-   TABLA ESTILO EXCEL (DASHBOARD)
+   CONTENEDORES Y TEXTOS
    ========================================= */
-.excel-table {
+.module-container {
+    background-color: var(--bg-card);
     width: 100%;
-    border-collapse: collapse;
-    font-size: 0.85rem;
-    background-color: white;
+    max-width: 100%;
+    padding: 40px;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.8);
 }
 
-.excel-table th, .excel-table td {
-    border: 1px solid #cbd5e1;
-    padding: 10px 12px;
-    text-align: right;
+.module-container h2 {
+    color: var(--primary);
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+    letter-spacing: -0.025em;
 }
 
-.excel-table th {
-    background-color: #f8fafc;
-    color: #0f172a;
+.module-container p {
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    margin-bottom: 30px;
+}
+
+hr {
+    border: 0;
+    height: 1px;
+    background-color: var(--border);
+    margin: 30px 0;
+}
+
+/* =========================================
+   FORMULARIOS Y CONTROLES
+   ========================================= */
+.form-group {
+    margin-bottom: 20px;
+}
+
+label {
+    display: block;
     font-weight: 600;
-    text-align: center;
-    position: sticky;
-    top: 0;
+    font-size: 0.85rem;
+    margin-bottom: 8px;
+    color: var(--primary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
 }
 
-/* Alineación de las primeras dos columnas (Textos) */
-.excel-table td:nth-child(1), .excel-table td:nth-child(2),
-.excel-table th:nth-child(1), .excel-table th:nth-child(2) {
-    text-align: left;
+input[type="text"],
+input[type="number"],
+input[type="file"],
+select {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.95rem;
+    color: var(--text-main);
+    background-color: #f8fafc;
+    transition: all 0.2s ease;
 }
 
-.excel-table tr:hover td {
-    background-color: #f1f5f9;
-}
-
-.transit-badge {
-    font-size: 0.7rem;
-    color: #d97706;
-    background: #fef3c7;
-    padding: 2px 5px;
-    border-radius: 4px;
-    margin-left: 6px;
-    font-weight: bold;
+input:focus,
+select:focus {
+    outline: none;
+    border-color: var(--accent);
+    background-color: #ffffff;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
 }
 
 /* =========================================
@@ -135,7 +182,7 @@ body {
    ========================================= */
 button {
     background: linear-gradient(135deg, var(--primary) 0%, #1e293b 100%);
-    color: white;
+    color: #ffffff !important;
     border: 1px solid rgba(255, 255, 255, 0.1);
     padding: 10px 20px;
     border-radius: 8px;
@@ -147,6 +194,7 @@ button {
     display: inline-flex;
     align-items: center;
     gap: 8px;
+    text-shadow: 0 1px 1px rgba(0,0,0,0.3);
 }
 
 button:hover {
@@ -160,8 +208,20 @@ button:active {
     box-shadow: 0 2px 4px -1px rgba(15, 23, 42, 0.2);
 }
 
+button:disabled {
+    background: var(--text-muted);
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+/* Botón específico de Excel en verde */
+#export-dashboard-btn {
+    background-image: linear-gradient(135deg, #107c41 0%, #0c6334 100%);
+}
+
 /* =========================================
-   BARRA DE ACCIÓN Y BUSCADOR
+   BARRA DE ACCIÓN, BUSCADOR Y FILTROS
    ========================================= */
 .action-bar {
     display: flex;
@@ -180,7 +240,7 @@ button:active {
 
 .search-box input {
     width: 100%;
-    padding: 12px 16px 12px 40px; /* Espacio para el icono a la izquierda */
+    padding: 12px 16px 12px 40px;
     border: 1px solid var(--border);
     border-radius: 8px;
     background-color: white;
@@ -200,4 +260,82 @@ button:active {
     transform: translateY(-50%);
     color: var(--text-muted);
     font-size: 1.1rem;
+}
+
+.filter-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #334155;
+    cursor: pointer;
+    background: white;
+    padding: 10px 15px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    margin: 0;
+    text-transform: none; 
+    letter-spacing: normal;
+}
+
+.filter-toggle input { 
+    width: 16px; 
+    height: 16px; 
+    cursor: pointer; 
+}
+
+/* =========================================
+   TABLA ESTILO EXCEL (DASHBOARD)
+   ========================================= */
+.excel-table {
+    width: 100%;
+    border-collapse: separate; /* Cambiado a separate para que sticky box-shadow funcione bien */
+    border-spacing: 0;
+    font-size: 0.85rem;
+    background-color: white;
+}
+
+.excel-table th, .excel-table td {
+    border: 1px solid #cbd5e1;
+    padding: 10px 12px;
+    text-align: right;
+}
+
+.excel-table th {
+    background-color: #f8fafc;
+    color: #0f172a;
+    font-weight: 700;
+    text-align: center;
+    position: sticky;
+    top: 0;
+    z-index: 10; /* Evita que el contenido pase por encima del encabezado al hacer scroll */
+    box-shadow: 0 2px 4px -2px rgba(0,0,0,0.1);
+}
+
+/* Evitar bordes dobles por border-collapse: separate */
+.excel-table td { border-top: none; border-left: none; }
+.excel-table th { border-left: none; }
+.excel-table td:first-child, .excel-table th:first-child { border-left: 1px solid #cbd5e1; }
+
+/* Alineación de las primeras dos columnas (Textos) */
+.excel-table td:nth-child(1), .excel-table td:nth-child(2),
+.excel-table th:nth-child(1), .excel-table th:nth-child(2) {
+    text-align: left;
+}
+
+.excel-table tr:hover td {
+    background-color: #f1f5f9;
+}
+
+.transit-badge {
+    font-size: 0.7rem;
+    color: #d97706;
+    background: #fef3c7;
+    padding: 2px 5px;
+    border-radius: 4px;
+    margin-left: 6px;
+    font-weight: bold;
+    display: inline-block;
 }
