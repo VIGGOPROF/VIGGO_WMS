@@ -8,33 +8,44 @@ export async function onRequestPost(context) {
 
     const statements = [];
     for (const item of items) {
-        const sku = (item.SKU || item.sku || '').toString().trim();
-        const name = (item.Nombre || item.nombre || item.name || '').toString().trim();
-        const category = (item.Categoria || item.Categoría || '').toString().trim();
-        const factory = (item.Fabrica || item.Fábrica || '').toString().trim();
-        const order = parseInt(item.Orden || item.orden || 999);
+        let sku = '', name = '', category = '', factory = '', order = 999;
+        
+        // Búsqueda de columnas inteligente (ignora mayúsculas y espacios invisibles)
+        for (const key in item) {
+            const k = key.trim().toLowerCase();
+            if (k === 'sku') sku = item[key].toString().trim();
+            if (k === 'nombre' || k === 'name' || k === 'producto') name = item[key].toString().trim();
+            if (k === 'categoria' || k === 'categoría') category = item[key].toString().trim();
+            if (k === 'fabrica' || k === 'fábrica') factory = item[key].toString().trim();
+            if (k === 'orden' || k === 'order') order = parseInt(item[key]) || 999;
+        }
 
         if (!sku) continue;
+        
+        // Si a pesar de todo el nombre viene vacío, usamos el SKU como red de seguridad
+        const finalName = name !== '' ? name : sku;
 
+        // Crear la fábrica dinámicamente si no existe
         if (factory) {
             statements.push(db.prepare("INSERT OR IGNORE INTO factories (name) VALUES (?)").bind(factory));
         }
 
+        // Catálogo Maestro: FORZAMOS la sobreescritura total con la información del Excel
         statements.push(
             db.prepare(`
                 INSERT INTO products (sku, name, category, factory_name, display_order) 
                 VALUES (?, ?, ?, ?, ?)
                 ON CONFLICT(sku) DO UPDATE SET 
-                    name = COALESCE(NULLIF(excluded.name, excluded.sku), NULLIF(excluded.name, ''), products.name),
-                    category = COALESCE(NULLIF(excluded.category, ''), products.category),
-                    factory_name = COALESCE(NULLIF(excluded.factory_name, ''), products.factory_name),
+                    name = excluded.name,
+                    category = excluded.category,
+                    factory_name = excluded.factory_name,
                     display_order = excluded.display_order
-            `).bind(sku, name || sku, category, factory, order)
+            `).bind(sku, finalName, category, factory, order)
         );
     }
 
     await db.batch(statements);
-    return new Response(JSON.stringify({ success: true, message: `Catálogo actualizado.` }));
+    return new Response(JSON.stringify({ success: true, message: `Catálogo de ${items.length} artículos actualizado perfectamente.` }));
   } catch (error) {
     return new Response(JSON.stringify({ error: error.message }), { status: 500 });
   }
