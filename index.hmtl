@@ -1,1 +1,13 @@
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 
+<div class="module-container">
+  <h2>Ingreso de Mercadería (Nodo Origen: China)</h2>
+  <p>Sube el Excel del proveedor. Columnas requeridas: <strong>SKU | Nombre | Categoria | Cantidad</strong></p>
+  
+  <input type="file" id="excel-file" accept=".xlsx, .xls" />
+  <button id="upload-btn">Procesar y Cargar Stock</button>
+  
+  <div id="status-box" style="margin-top: 15px; font-weight: bold;"></div>
+</div>
+
+<script src="script.js"></script>
