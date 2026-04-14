@@ -367,56 +367,99 @@ if (searchTransitBtn) {
 }
 
 // ====================================================================
-// MÓDULO 5: SALIDA DE STOCK (Solo se ejecuta si existe el botón)
+// MÓDULO: RADAR EN TRÁNSITO
 // ====================================================================
-const outboundBtn = document.getElementById('outbound-btn');
+const transitViewContainer = document.getElementById('active-transits-container');
+const filterOrigin = document.getElementById('filter-origin');
+const filterDest = document.getElementById('filter-dest');
+const refreshTransitsBtn = document.getElementById('refresh-transits');
 
-if (outboundBtn) {
-    outboundBtn.addEventListener('click', async () => {
-        const nodeId = document.getElementById('outbound-node').value;
-        const sku = document.getElementById('outbound-sku').value;
-        const qty = parseInt(document.getElementById('outbound-qty').value);
-        const ref = document.getElementById('outbound-ref').value;
-        const statusBox = document.getElementById('outbound-status');
+if (transitViewContainer) {
+    const loadActiveTransits = async () => {
+        transitViewContainer.innerHTML = '<p>⏳ Escaneando radar logístico...</p>';
+        try {
+            const res = await fetch('/api/active_transits');
+            const result = await res.json();
+            
+            if (res.ok && result.data) {
+                window.transitData = result.data; // Guardamos en memoria para los filtros rápidos
+                renderTransitTable();
+            } else {
+                transitViewContainer.innerHTML = `<p style="color:red;">❌ Error: ${result.error}</p>`;
+            }
+        } catch (error) {
+            transitViewContainer.innerHTML = `<p style="color:red;">❌ Error de conexión: ${error.message}</p>`;
+        }
+    };
 
-        if (!sku || !qty || qty <= 0) {
-            statusBox.innerText = '⚠️ Ingresa un SKU válido y una cantidad mayor a cero.';
-            statusBox.style.color = 'red';
+    const renderTransitTable = () => {
+        if (!window.transitData || window.transitData.length === 0) {
+            transitViewContainer.innerHTML = `
+                <div style="text-align:center; padding:40px; background:#f8fafc; border:1px dashed #cbd5e1; border-radius:8px;">
+                    <span style="font-size:2rem;">🚢</span>
+                    <p style="color:#64748b; margin-top:10px;">No hay mercadería en tránsito en este momento.</p>
+                </div>`;
             return;
         }
 
-        statusBox.innerText = '⏳ Procesando salida de stock...';
-        statusBox.style.color = 'black';
-        outboundBtn.disabled = true;
+        const origFilter = filterOrigin.value;
+        const destFilter = filterDest.value;
 
-        try {
-            const res = await fetch('/api/outbound', {
-                method: 'POST',
-                // Enviamos los datos, incluyendo la referencia por si a futuro armamos un historial
-                body: JSON.stringify({ nodeId, sku, qty, ref }),
-                headers: { 'Content-Type': 'application/json' }
-            });
+        // Filtrar datos en vivo
+        const filtered = window.transitData.filter(item => {
+            const matchOrig = origFilter === 'ALL' || item.origin === origFilter;
+            const matchDest = destFilter === 'ALL' || item.destination === destFilter;
+            return matchOrig && matchDest;
+        });
 
-            const result = await res.json();
-
-            if (res.ok) {
-                statusBox.innerText = `✅ ${result.message}`;
-                statusBox.style.color = 'green';
-                // Limpiar campos
-                document.getElementById('outbound-sku').value = '';
-                document.getElementById('outbound-qty').value = '';
-                document.getElementById('outbound-ref').value = '';
-            } else {
-                statusBox.innerText = `❌ Error: ${result.error}`;
-                statusBox.style.color = 'red';
-            }
-        } catch (error) {
-            statusBox.innerText = `❌ Error de conexión: ${error.message}`;
-            statusBox.style.color = 'red';
-        } finally {
-            outboundBtn.disabled = false;
+        if (filtered.length === 0) {
+            transitViewContainer.innerHTML = '<p style="color:#64748b; padding: 20px;">Ningún despacho coincide con estos filtros.</p>';
+            return;
         }
-    });
+
+        let html = `
+            <table class="excel-table">
+                <thead>
+                    <tr>
+                        <th style="width: 100px;">Orden #</th>
+                        <th>🛫 Origen</th>
+                        <th>🛬 Destino</th>
+                        <th>SKU</th>
+                        <th>Producto</th>
+                        <th>Cantidad</th>
+                        <th>ETA (Llegada)</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+
+        filtered.forEach(item => {
+            const etaDate = new Date(item.estimated_arrival).toLocaleDateString('es-ES');
+            
+            html += `
+                <tr>
+                    <td style="text-align:center;"><strong>${item.transfer_id}</strong></td>
+                    <td>${item.origin}</td>
+                    <td>${item.destination}</td>
+                    <td><strong>${item.sku}</strong></td>
+                    <td>${item.product}</td>
+                    <td style="color: #d97706; font-weight:bold;">${item.quantity}</td>
+                    <td style="font-weight:500;">${etaDate}</td>
+                </tr>
+            `;
+        });
+        
+        html += '</tbody></table>';
+        transitViewContainer.innerHTML = html;
+    };
+
+    // Listeners para re-dibujar la tabla al instante cuando tocas un filtro
+    if (filterOrigin) filterOrigin.addEventListener('change', renderTransitTable);
+    if (filterDest) filterDest.addEventListener('change', renderTransitTable);
+    if (refreshTransitsBtn) refreshTransitsBtn.addEventListener('click', loadActiveTransits);
+
+    // Cargar datos al abrir la página
+    loadActiveTransits();
 }
 
 // ====================================================================
