@@ -3,30 +3,28 @@ export async function onRequestPost(context) {
     const data = await context.request.json();
     const db = context.env.DB;
 
-    // 1. Garantizar que el Nodo 1 (China Central) exista antes de cargar stock
+    // 1. Garantizar que el Nodo 1 exista
     await db.prepare("INSERT OR IGNORE INTO nodes (id, name, country_code, is_origin) VALUES (1, 'China Central', 'CN', 1)").run();
 
     const statements = [];
 
     // 2. Iterar sobre cada fila del Excel
     for (const item of data) {
-      // Validar que la fila tenga al menos el SKU
-      if (!item.SKU) continue;
+      // Hacemos la lectura de columnas más flexible (acepta mayúsculas o minúsculas)
+      const rawSku = item.SKU || item.sku || item.Sku;
+      
+      // Si la fila realmente no tiene SKU, la saltamos
+      if (!rawSku) continue;
 
-      const sku = item.SKU.toString();
-      const name = item.Nombre || 'Sin Nombre';
-      const category = item.Categoria || 'General';
-      const quantity = parseInt(item.Cantidad) || 0;
+      const sku = rawSku.toString().trim();
+      const name = item.Nombre || item.nombre || 'Sin Nombre';
+      const category = item.Categoria || item.categoria || 'General';
+      const quantity = parseInt(item.Cantidad || item.cantidad) || 0;
 
-      // A. Insertar el producto en el catálogo general (Si ya existe el SKU, lo ignora)
       statements.push(
-        db.prepare("INSERT OR IGNORE INTO products (sku, name, category) VALUES (?, ?, ?)")
-          .bind(sku, name, category)
+        db.prepare("INSERT OR IGNORE INTO products (sku, name, category) VALUES (?, ?, ?)").bind(sku, name, category)
       );
 
-      // B. Actualizar el inventario del Nodo 1 (China)
-      // Esta query busca el ID del producto por su SKU y suma la cantidad. 
-      // Si el registro de inventario ya existe, lo actualiza (UPSERT).
       statements.push(
         db.prepare(`
           INSERT INTO inventory (node_id, product_id, quantity)
@@ -36,12 +34,22 @@ export async function onRequestPost(context) {
       );
     }
 
-    // 3. Ejecutar todas las consultas de golpe (mucho más rápido que una por una)
+    // 3. LA CLAVE DEL ARREGLO: Verificar que haya datos antes de enviar a D1
+    if (statements.length === 0) {
+      return new Response(JSON.stringify({ 
+          error: "No se encontraron productos para cargar. Verifica que el Excel tenga la columna 'SKU'." 
+      }), { 
+          status: 400, 
+          headers: { "Content-Type": "application/json" } 
+      });
+    }
+
+    // 4. Ejecutar todas las consultas de golpe
     await db.batch(statements);
 
     return new Response(JSON.stringify({ 
         status: "success", 
-        message: `Se procesaron e ingresaron ${data.length} líneas de stock en origen.` 
+        message: `Se ingresaron correctamente los productos en el stock de origen.` 
     }), { 
         headers: { "Content-Type": "application/json" } 
     });
