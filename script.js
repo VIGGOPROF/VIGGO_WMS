@@ -575,49 +575,77 @@ const docsContainer = document.getElementById('docs-list-container');
 if (loadDocsBtn) {
     loadDocsBtn.addEventListener('click', async () => {
         const nodeId = document.getElementById('doc-node-select').value;
-        docsContainer.innerHTML = '<p>⏳ Buscando registros...</p>';
+        docsContainer.innerHTML = '<div style="grid-column: 1/-1; text-align:center;">⏳ Buscando expedientes...</div>';
 
         try {
             const res = await fetch(`/api/proformas?node=${nodeId}`);
             const result = await res.json();
 
-            if (res.ok && result.data.length > 0) {
+            if (res.ok && result.data && result.data.length > 0) {
                 let html = '';
-                result.data.forEach(t => {
+                
+                // Ordenar de más reciente a más antiguo
+                const sortedData = result.data.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+                sortedData.forEach(t => {
+                    // Calculamos el valor total para mostrarlo en la tarjeta
+                    const totalInvoice = t.items.reduce((sum, item) => sum + (item.quantity * item.price), 0);
+                    const formattedDate = new Date(t.date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
+
                     html += `
-                        <div style="border:1px solid #ddd; padding:15px; margin-bottom:10px; border-radius:8px;">
-                            <strong>Transferencia #${t.id} - Destino: ${t.destination}</strong><br>
-                            <small>Fecha: ${new Date(t.date).toLocaleDateString()}</small>
-                            <div style="margin-top:10px;">
-                                <button onclick="exportToExcel(${JSON.stringify(t).replace(/"/g, '&quot;')})">📊 Exportar Excel</button>
-                                <button onclick="exportToPDF(${JSON.stringify(t).replace(/"/g, '&quot;')})">📄 Generar PDF</button>
+                        <div class="doc-card">
+                            <div class="doc-header">
+                                <span class="doc-title">Orden #${t.id}</span>
+                                <span class="doc-date">📅 ${formattedDate}</span>
+                            </div>
+                            <div class="doc-info">
+                                <p><strong>Destino:</strong> ${t.destination}</p>
+                                <p><strong>Valor Total:</strong> $${totalInvoice.toFixed(2)} USD</p>
+                                <p><strong>Artículos:</strong> ${t.items.length} SKUs distintos</p>
+                            </div>
+                            <div class="doc-actions">
+                                <button class="btn-excel" onclick="exportToExcel(${JSON.stringify(t).replace(/"/g, '&quot;')})">
+                                    📊 CSV
+                                </button>
+                                <button class="btn-pdf" onclick="exportToPDF(${JSON.stringify(t).replace(/"/g, '&quot;')})">
+                                    📄 PDF
+                                </button>
                             </div>
                         </div>
                     `;
                 });
                 docsContainer.innerHTML = html;
             } else {
-                docsContainer.innerHTML = '<p>No se encontraron transferencias para este nodo.</p>';
+                docsContainer.innerHTML = `
+                    <div style="grid-column: 1 / -1; text-align: center; padding: 40px; border: 1px dashed #cbd5e1; border-radius: 8px; background: #f8fafc;">
+                        <p style="color: #64748b;">No se encontraron transferencias recientes para este destino.</p>
+                    </div>`;
             }
-        } catch (err) { docsContainer.innerHTML = `<p style="color:red;">${err.message}</p>`; }
+        } catch (err) { 
+            docsContainer.innerHTML = `<div style="grid-column: 1/-1; color:red; text-align:center;">${err.message}</div>`; 
+        }
     });
 }
 
-// Función para exportar a Excel (CSV)
+// Exportación CSV (Excel)
 window.exportToExcel = (data) => {
-    let csv = 'SKU,Producto,Cantidad,Precio Unitario,Total\n';
+    let csv = 'SKU,Producto,Cantidad,Precio Unitario (USD),Total (USD)\n';
     data.items.forEach(item => {
-        csv += `${item.sku},${item.product_name},${item.quantity},${item.price},${(item.quantity * item.price).toFixed(2)}\n`;
+        // Limpiamos comas en los nombres para no romper el CSV
+        const cleanName = item.product_name.replace(/,/g, '');
+        csv += `${item.sku},${cleanName},${item.quantity},${item.price},${(item.quantity * item.price).toFixed(2)}\n`;
     });
     
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
-    link.setAttribute("download", `Proforma_Viiggo_${data.id}.csv`);
+    link.setAttribute("download", `Proforma_Viiggo_Orden_${data.id}.csv`);
+    document.body.appendChild(link);
     link.click();
+    document.body.removeChild(link);
 };
 
-// Función para generar PDF (vía ventana de impresión optimizada)
+// Generador de PDF Nativo
 window.exportToPDF = (data) => {
     const printWindow = window.open('', '_blank');
     let itemsHtml = '';
@@ -626,27 +654,80 @@ window.exportToPDF = (data) => {
     data.items.forEach(item => {
         const subtotal = item.quantity * item.price;
         total += subtotal;
-        itemsHtml += `<tr><td>${item.sku}</td><td>${item.product_name}</td><td>${item.quantity}</td><td>$${item.price}</td><td>$${subtotal.toFixed(2)}</td></tr>`;
+        itemsHtml += `
+            <tr>
+                <td style="padding:10px; border-bottom:1px solid #eee;">${item.sku}</td>
+                <td style="padding:10px; border-bottom:1px solid #eee; color:#555;">${item.product_name}</td>
+                <td style="padding:10px; border-bottom:1px solid #eee; text-align:center;">${item.quantity}</td>
+                <td style="padding:10px; border-bottom:1px solid #eee; text-align:right;">$${item.price.toFixed(2)}</td>
+                <td style="padding:10px; border-bottom:1px solid #eee; text-align:right; font-weight:bold;">$${subtotal.toFixed(2)}</td>
+            </tr>`;
     });
 
+    const docDate = new Date(data.date).toLocaleDateString('es-ES');
+
     printWindow.document.write(`
+        <!DOCTYPE html>
         <html>
-        <head><title>Proforma Viiggo Professional</title></head>
-        <body style="font-family: Arial, sans-serif; padding: 40px;">
-            <h1 style="text-align:center;">PROFORMA INVOICE</h1>
-            <p><strong>Viiggo Professional - International Logistics</strong></p>
-            <hr>
-            <p><strong>Transfer ID:</strong> #${data.id} | <strong>Destino:</strong> ${data.destination}</p>
-            <p><strong>Fecha de Emisión:</strong> ${new Date(data.date).toLocaleDateString()}</p>
-            <table border="1" style="width:100%; border-collapse:collapse; margin-top:20px;">
-                <thead><tr><th>SKU</th><th>Descripción</th><th>Cant.</th><th>P. Unit</th><th>Subtotal</th></tr></thead>
-                <tbody>${itemsHtml}</tbody>
-                <tfoot><tr><th colspan="4" style="text-align:right;">TOTAL USD:</th><th>$${total.toFixed(2)}</th></tr></tfoot>
+        <head>
+            <title>Proforma Invoice #${data.id}</title>
+            <style>
+                body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 40px; color: #333; }
+                .header { border-bottom: 2px solid #0f172a; padding-bottom: 15px; margin-bottom: 30px; }
+                .title { margin: 0; font-size: 28px; color: #0f172a; text-transform: uppercase; letter-spacing: 1px; }
+                .subtitle { margin: 5px 0 0 0; color: #64748b; font-size: 14px; }
+                .info-table { width: 100%; margin-bottom: 40px; font-size: 14px; }
+                .info-table td { padding: 5px 0; }
+                .items-table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+                .items-table th { background: #f8fafc; padding: 12px 10px; text-align: left; font-size: 12px; text-transform: uppercase; color: #64748b; border-bottom: 2px solid #e2e8f0; }
+                .total-row th { font-size: 18px; color: #0f172a; padding-top: 20px; }
+                .footer { margin-top: 50px; font-size: 11px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 15px; text-align: center; }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <h1 class="title">PROFORMA INVOICE</h1>
+                <p class="subtitle">VIIGGO PROFESSIONAL WMS - International Logistics</p>
+            </div>
+            
+            <table class="info-table">
+                <tr>
+                    <td><strong>Transfer Order:</strong> #${data.id}</td>
+                    <td style="text-align:right;"><strong>Date of Issue:</strong> ${docDate}</td>
+                </tr>
+                <tr>
+                    <td><strong>Origin:</strong> China Central Warehouse</td>
+                    <td style="text-align:right;"><strong>Destination:</strong> ${data.destination}</td>
+                </tr>
             </table>
-            <p style="margin-top:50px; font-size:12px;">Documento generado automáticamente por Viiggo WMS.</p>
+
+            <table class="items-table">
+                <thead>
+                    <tr>
+                        <th>SKU</th>
+                        <th>Descripción</th>
+                        <th style="text-align:center;">Qty</th>
+                        <th style="text-align:right;">Unit Price</th>
+                        <th style="text-align:right;">Subtotal</th>
+                    </tr>
+                </thead>
+                <tbody>${itemsHtml}</tbody>
+                <tfoot>
+                    <tr class="total-row">
+                        <th colspan="4" style="text-align:right;">TOTAL AMOUNT (USD):</th>
+                        <th style="text-align:right;">$${total.toFixed(2)}</th>
+                    </tr>
+                </tfoot>
+            </table>
+            
+            <div class="footer">
+                Terms: Intercompany transfer. Goods in transit are insured by Viiggo Logistics Group.<br>
+                Document generated automatically by Viiggo WMS.
+            </div>
         </body>
         </html>
     `);
+    
     printWindow.document.close();
-    printWindow.print();
+    setTimeout(() => { printWindow.print(); }, 500);
 };
