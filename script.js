@@ -186,42 +186,54 @@ if (dashboardContainer) {
             const res = await fetch('/api/dashboard');
             const result = await res.json();
 
-            if (res.ok && result.data) {
-                const nodes = Object.keys(result.data);
-                const productMap = new Map();
+            // Verificamos que vengan los datos Y los nodos (columnas)
+            if (res.ok && result.data && result.nodes) {
+                const nodes = result.nodes; // Array de depósitos ordenados
+                const inventory = result.data; // Array de filas de inventario
 
-                for (const [nodeName, nodeInfo] of Object.entries(result.data)) {
-                    nodeInfo.items.forEach(item => {
-                        if (!productMap.has(item.sku)) {
-                            const defaultStock = {};
-                            nodes.forEach(n => defaultStock[n] = { phys: 0, trans: 0 });
-                            productMap.set(item.sku, { name: item.name, stock: defaultStock });
-                        }
-                        productMap.get(item.sku).stock[nodeName] = { 
-                            phys: item.physical || 0, 
-                            trans: item.transit || 0 
-                        };
-                    });
-                }
-
-                if (productMap.size === 0) {
+                if (inventory.length === 0) {
                     dashboardContainer.innerHTML = '<p style="color: gray;">Sin stock registrado en el sistema.</p>';
                     return;
                 }
 
+                // Agrupamos el inventario por SKU
+                const productMap = new Map();
+
+                inventory.forEach(row => {
+                    // Si el producto no existe en el mapa, lo creamos con stock 0 en todos los depósitos
+                    if (!productMap.has(row.sku)) {
+                        const defaultStock = {};
+                        nodes.forEach(n => defaultStock[n.id] = { phys: 0, trans: 0 });
+                        productMap.set(row.sku, { name: row.product_name, stock: defaultStock });
+                    }
+                    
+                    // Llenamos el stock real para el depósito correspondiente
+                    if (row.node_id) {
+                        productMap.get(row.sku).stock[row.node_id] = { 
+                            phys: row.quantity || 0, 
+                            trans: row.transit_qty || 0 
+                        };
+                    }
+                });
+
+                // Construimos la tabla HTML dinámicamente
                 let html = '<table class="excel-table"><thead><tr>';
                 html += '<th>SKU</th><th>Producto</th>';
-                nodes.forEach(n => html += `<th>${n}</th>`);
+                
+                // Dibujamos las cabeceras respetando el ORDEN de los Nodos
+                nodes.forEach(n => html += `<th>${n.name}</th>`);
                 html += '</tr></thead><tbody>';
 
+                // Dibujamos las filas de productos
                 productMap.forEach((data, sku) => {
                     html += `<tr>
                                 <td><strong>${sku}</strong></td>
                                 <td>${data.name}</td>`;
                     
+                    // Rellenamos las celdas en el mismo orden de los Nodos
                     nodes.forEach(n => {
-                        const stock = data.stock[n];
-                        const transHtml = stock.trans > 0 ? `<span class="transit-badge">✈️ +${stock.trans}</span>` : '';
+                        const stock = data.stock[n.id];
+                        const transHtml = stock.trans > 0 ? `<span class="transit-badge" style="color:#d97706; font-size:0.8rem; margin-left:5px;">✈️ +${stock.trans}</span>` : '';
                         html += `<td>${stock.phys} ${transHtml}</td>`;
                     });
                     html += '</tr>';
@@ -230,11 +242,11 @@ if (dashboardContainer) {
                 html += '</tbody></table>';
                 dashboardContainer.innerHTML = html;
 
-                // Re-aplicar filtros inmediatamente después de cargar por si quedó algo escrito/marcado
+                // Re-aplicar filtros
                 applyFilters();
 
             } else {
-                dashboardContainer.innerHTML = `<p style="color: red;">❌ Error: ${result.error}</p>`;
+                dashboardContainer.innerHTML = `<p style="color: red;">❌ Error: ${result.error || 'Estructura de datos inválida'}</p>`;
             }
         } catch (error) {
             dashboardContainer.innerHTML = `<p style="color: red;">❌ Error de red: ${error.message}</p>`;
@@ -250,17 +262,12 @@ if (dashboardContainer) {
         rows.forEach(row => {
             const sku = row.cells[0].textContent.toLowerCase();
             const name = row.cells[1].textContent.toLowerCase();
-            // Verifica si la fila tiene la etiqueta de tránsito
             const hasTransit = row.querySelector('.transit-badge') !== null;
             
             const matchesSearch = sku.includes(term) || name.includes(term);
             const matchesTransit = !onlyTransit || hasTransit;
             
-            if (matchesSearch && matchesTransit) {
-                row.style.display = '';
-            } else {
-                row.style.display = 'none';
-            }
+            row.style.display = (matchesSearch && matchesTransit) ? '' : 'none';
         });
     };
 
@@ -272,25 +279,20 @@ if (dashboardContainer) {
     if (exportBtn) {
         exportBtn.addEventListener('click', () => {
             let csv = [];
-            // Toma todas las filas de la tabla (incluyendo el header)
             const rows = dashboardContainer.querySelectorAll('table tr');
             
             rows.forEach(row => {
-                // Solo exporta las filas que están visibles (respeta el buscador)
                 if (row.style.display !== 'none') {
                     let cols = row.querySelectorAll('td, th');
                     let rowData = [];
                     cols.forEach(col => {
-                        // Limpia la celda: quita emojis de avión y saltos de línea para el Excel
                         let text = col.innerText.replace(/\n/g, ' ').replace(/✈️/g, '').trim();
-                        // Envuelve en comillas por si hay comas en los nombres de productos
                         rowData.push(`"${text}"`);
                     });
                     csv.push(rowData.join(','));
                 }
             });
 
-            // Genera y descarga el archivo CSV
             const blob = new Blob([csv.join('\n')], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement("a");
             link.href = URL.createObjectURL(blob);
