@@ -2,13 +2,13 @@ export async function onRequestGet(context) {
   try {
     const db = context.env.DB;
 
-    // 1. Nodos ordenados por la configuración del Catálogo
+    // 1. Obtenemos las columnas ordenadas según tu Catálogo
     const { results: nodes } = await db.prepare(`
         SELECT id, name FROM nodes 
         ORDER BY display_order ASC
     `).all();
 
-    // 2. Inventario respetando el Orden de tu Catálogo
+    // 2. Obtenemos el inventario y los tránsitos
     const query = `
         SELECT 
             p.sku, 
@@ -31,13 +31,11 @@ export async function onRequestGet(context) {
     
     const { results: inventory } = await db.prepare(query).all();
 
-    // 3. Respuesta empaquetada correctamente para tu script visual
+    // 3. EL ARREGLO: Entregamos los datos con los nombres exactos que espera script.js
     return new Response(JSON.stringify({ 
         status: "success", 
-        data: {
-            nodes: nodes,
-            inventory: inventory
-        }
+        data: inventory,  // Tu web lee "data" para hacer el forEach de los productos
+        nodes: nodes      // Tu web lee "nodes" para hacer el forEach de las columnas
     }), {
         headers: { "Content-Type": "application/json" }
     });
