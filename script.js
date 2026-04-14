@@ -203,6 +203,29 @@ if (dashboardContainer) {
     }
 }
 
+// --- LÓGICA DEL BUSCADOR EN VIVO ---
+    const searchInput = document.getElementById('dashboard-search');
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            const term = this.value.toLowerCase();
+            // Seleccionamos todas las filas dentro del tbody del dashboard
+            const rows = dashboardContainer.querySelectorAll('tbody tr');
+            
+            rows.forEach(row => {
+                // Buscamos en la columna 1 (SKU) y columna 2 (Nombre)
+                const sku = row.cells[0].textContent.toLowerCase();
+                const name = row.cells[1].textContent.toLowerCase();
+                
+                // Si el término escrito está en el SKU o el Nombre, mostramos la fila, sino la ocultamos
+                if (sku.includes(term) || name.includes(term)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        });
+    }
+
 // ====================================================================
 // MÓDULO 4: RECEPCIÓN DE MERCADERÍA (Solo se ejecuta si existe el botón)
 // ====================================================================
