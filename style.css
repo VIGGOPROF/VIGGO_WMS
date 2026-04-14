@@ -1,6 +1,11 @@
-/* Importamos la fuente Inter de Google, el estándar actual para SaaS */
+/* =========================================
+   IMPORTACIÓN DE FUENTES (Estándar SaaS)
+   ========================================= */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
+/* =========================================
+   VARIABLES DE COLOR GLOBAL
+   ========================================= */
 :root {
     --bg-app: #f4f7f6;        /* Fondo general de la app (Gris muy claro) */
     --bg-card: #ffffff;       /* Fondo de los módulos */
@@ -209,15 +214,25 @@ button:active {
 }
 
 button:disabled {
-    background: var(--text-muted);
+    background: var(--text-muted) !important;
     cursor: not-allowed;
     transform: none;
     box-shadow: none;
 }
 
-/* Botón específico de Excel en verde */
+/* Botones específicos forzados (para evitar que queden blancos por la caché) */
+#refresh-dashboard {
+    background-color: #0f172a !important;
+    background-image: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
+    color: #ffffff !important;
+    border: none;
+}
+
 #export-dashboard-btn {
-    background-image: linear-gradient(135deg, #107c41 0%, #0c6334 100%);
+    background-color: #107c41 !important;
+    background-image: linear-gradient(135deg, #107c41 0%, #0c6334 100%) !important;
+    color: #ffffff !important;
+    border: none;
 }
 
 /* =========================================
@@ -268,7 +283,7 @@ button:disabled {
     gap: 8px;
     font-size: 0.9rem;
     font-weight: 600;
-    color: #334155;
+    color: var(--text-main);
     cursor: pointer;
     background: white;
     padding: 10px 15px;
@@ -287,37 +302,46 @@ button:disabled {
 }
 
 /* =========================================
-   TABLA ESTILO EXCEL (DASHBOARD)
+   TABLA ESTILO EXCEL (DASHBOARD) - FIX SCROLL
    ========================================= */
+#dashboard-container {
+    max-height: calc(100vh - 220px); /* La tabla ocupa el alto de la pantalla restante */
+    overflow: auto; /* Habilita el scroll vertical y horizontal DENTRO de la tabla */
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    background-color: white;
+}
+
 .excel-table {
     width: 100%;
-    border-collapse: separate; /* Cambiado a separate para que sticky box-shadow funcione bien */
+    border-collapse: separate; /* Obligatorio para que funcione position: sticky sin bugs */
     border-spacing: 0;
     font-size: 0.85rem;
     background-color: white;
 }
 
 .excel-table th, .excel-table td {
-    border: 1px solid #cbd5e1;
     padding: 10px 12px;
     text-align: right;
+    border-bottom: 1px solid #cbd5e1;
+    border-right: 1px solid #cbd5e1;
 }
 
 .excel-table th {
     background-color: #f8fafc;
-    color: #0f172a;
+    color: var(--primary);
     font-weight: 700;
     text-align: center;
     position: sticky;
     top: 0;
-    z-index: 10; /* Evita que el contenido pase por encima del encabezado al hacer scroll */
-    box-shadow: 0 2px 4px -2px rgba(0,0,0,0.1);
+    z-index: 20; /* Elevado para evitar que el contenido se superponga */
+    box-shadow: inset 0 -2px 0 #cbd5e1; /* Crea un borde inferior fuerte para la cabecera sticky */
 }
 
-/* Evitar bordes dobles por border-collapse: separate */
-.excel-table td { border-top: none; border-left: none; }
-.excel-table th { border-left: none; }
-.excel-table td:first-child, .excel-table th:first-child { border-left: 1px solid #cbd5e1; }
+/* Evitar bordes dobles a los costados */
+.excel-table td:last-child, .excel-table th:last-child {
+    border-right: none;
+}
 
 /* Alineación de las primeras dos columnas (Textos) */
 .excel-table td:nth-child(1), .excel-table td:nth-child(2),
