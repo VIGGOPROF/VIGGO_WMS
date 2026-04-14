@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Viiggo WMS</title>
+    <link rel="stylesheet" href="style.css"> 
+    <style>
+        /* Estilos rápidos para las tarjetas del dashboard */
+        .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-top: 20px; }
+        .node-card { border: 1px solid #ccc; padding: 15px; border-radius: 8px; background: #f9f9f9; }
+        .node-card h3 { margin-top: 0; color: #333; border-bottom: 2px solid #ddd; padding-bottom: 5px; }
+        .stock-item { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #eee; }
+        .stock-transit { color: #f39c12; font-size: 0.9em; }
+    </style>
+</head>
+<body>
+
+    <div class="module-container">
+      <h2>Panorama Global de Inventario</h2>
+      <p>Vista en tiempo real del stock físico y en tránsito por cada depósito.</p>
+      
+      <button id="refresh-dashboard">Actualizar Datos</button>
+      
+      <div id="dashboard-container" class="dashboard-grid">
+          <p>Cargando datos...</p>
+      </div>
+    </div>
+
+    <script src="script.js"></script>
+    
+</body>
+</html>
