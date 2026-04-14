@@ -398,3 +398,88 @@ if (loadPricesBtn) {
         } catch (err) { status.innerText = '❌ Error al guardar.'; status.style.color = 'red'; }
     });
 }
+
+// ====================================================================
+// MÓDULO 7: DOCUMENTACIÓN (Proformas PDF/Excel)
+// ====================================================================
+const loadDocsBtn = document.getElementById('load-transfers-btn');
+const docsContainer = document.getElementById('docs-list-container');
+
+if (loadDocsBtn) {
+    loadDocsBtn.addEventListener('click', async () => {
+        const nodeId = document.getElementById('doc-node-select').value;
+        docsContainer.innerHTML = '<p>⏳ Buscando registros...</p>';
+
+        try {
+            const res = await fetch(`/api/proformas?node=${nodeId}`);
+            const result = await res.json();
+
+            if (res.ok && result.data.length > 0) {
+                let html = '';
+                result.data.forEach(t => {
+                    html += `
+                        <div style="border:1px solid #ddd; padding:15px; margin-bottom:10px; border-radius:8px;">
+                            <strong>Transferencia #${t.id} - Destino: ${t.destination}</strong><br>
+                            <small>Fecha: ${new Date(t.date).toLocaleDateString()}</small>
+                            <div style="margin-top:10px;">
+                                <button onclick="exportToExcel(${JSON.stringify(t).replace(/"/g, '&quot;')})">📊 Exportar Excel</button>
+                                <button onclick="exportToPDF(${JSON.stringify(t).replace(/"/g, '&quot;')})">📄 Generar PDF</button>
+                            </div>
+                        </div>
+                    `;
+                });
+                docsContainer.innerHTML = html;
+            } else {
+                docsContainer.innerHTML = '<p>No se encontraron transferencias para este nodo.</p>';
+            }
+        } catch (err) { docsContainer.innerHTML = `<p style="color:red;">${err.message}</p>`; }
+    });
+}
+
+// Función para exportar a Excel (CSV)
+window.exportToExcel = (data) => {
+    let csv = 'SKU,Producto,Cantidad,Precio Unitario,Total\n';
+    data.items.forEach(item => {
+        csv += `${item.sku},${item.product_name},${item.quantity},${item.price},${(item.quantity * item.price).toFixed(2)}\n`;
+    });
+    
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.setAttribute("download", `Proforma_Viiggo_${data.id}.csv`);
+    link.click();
+};
+
+// Función para generar PDF (vía ventana de impresión optimizada)
+window.exportToPDF = (data) => {
+    const printWindow = window.open('', '_blank');
+    let itemsHtml = '';
+    let total = 0;
+    
+    data.items.forEach(item => {
+        const subtotal = item.quantity * item.price;
+        total += subtotal;
+        itemsHtml += `<tr><td>${item.sku}</td><td>${item.product_name}</td><td>${item.quantity}</td><td>$${item.price}</td><td>$${subtotal.toFixed(2)}</td></tr>`;
+    });
+
+    printWindow.document.write(`
+        <html>
+        <head><title>Proforma Viiggo Professional</title></head>
+        <body style="font-family: Arial, sans-serif; padding: 40px;">
+            <h1 style="text-align:center;">PROFORMA INVOICE</h1>
+            <p><strong>Viiggo Professional - International Logistics</strong></p>
+            <hr>
+            <p><strong>Transfer ID:</strong> #${data.id} | <strong>Destino:</strong> ${data.destination}</p>
+            <p><strong>Fecha de Emisión:</strong> ${new Date(data.date).toLocaleDateString()}</p>
+            <table border="1" style="width:100%; border-collapse:collapse; margin-top:20px;">
+                <thead><tr><th>SKU</th><th>Descripción</th><th>Cant.</th><th>P. Unit</th><th>Subtotal</th></tr></thead>
+                <tbody>${itemsHtml}</tbody>
+                <tfoot><tr><th colspan="4" style="text-align:right;">TOTAL USD:</th><th>$${total.toFixed(2)}</th></tr></tfoot>
+            </table>
+            <p style="margin-top:50px; font-size:12px;">Documento generado automáticamente por Viiggo WMS.</p>
+        </body>
+        </html>
+    `);
+    printWindow.document.close();
+    printWindow.print();
+};
