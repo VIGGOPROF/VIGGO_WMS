@@ -463,57 +463,93 @@ if (transitViewContainer) {
 }
 
 // ====================================================================
-// MÓDULO 6: GESTOR DE PRECIOS (Solo se ejecuta si existe el botón)
+// MÓDULO 6: GESTOR DE PRECIOS HÍBRIDO (Excel + Edición Manual)
 // ====================================================================
-const loadPricesBtn = document.getElementById('load-prices-btn');
-const priceContainer = document.getElementById('price-list-container');
+const priceLoadBtn = document.getElementById('load-prices-btn');
+const pricesTable = document.getElementById('prices-table');
+const pricesTbody = document.getElementById('prices-tbody');
+const priceStatus = document.getElementById('price-list-status');
 const savePricesBtn = document.getElementById('save-prices-btn');
+const priceExcelInput = document.getElementById('price-excel-file');
 
-if (loadPricesBtn) {
-    loadPricesBtn.addEventListener('click', async () => {
+if (priceLoadBtn) {
+    // 1. Consultar Precios Actuales
+    priceLoadBtn.addEventListener('click', async () => {
         const nodeId = document.getElementById('price-node-select').value;
-        priceContainer.innerHTML = '<p>⏳ Cargando catálogo y precios...</p>';
-        document.getElementById('price-actions').style.display = 'none';
+        priceStatus.innerHTML = '⏳ Cargando lista de precios...';
+        priceStatus.style.display = 'block';
+        pricesTable.style.display = 'none';
+        savePricesBtn.style.display = 'none';
 
         try {
             const res = await fetch(`/api/prices?node=${nodeId}`);
             const result = await res.json();
-
             if (res.ok && result.data) {
-                let html = `
-                    <table class="price-table">
-                        <thead><tr><th>SKU</th><th>Producto</th><th>Precio (USD)</th></tr></thead>
-                        <tbody>
-                `;
-                result.data.forEach(item => {
-                    html += `
-                        <tr>
-                            <td>${item.sku}</td>
-                            <td>${item.name}</td>
-                            <td><input type="number" step="0.01" class="price-input" 
-                                       data-pid="${item.product_id}" value="${item.price}"></td>
-                        </tr>
-                    `;
-                });
-                html += '</tbody></table>';
-                priceContainer.innerHTML = html;
-                document.getElementById('price-actions').style.display = 'block';
+                renderPriceRows(result.data);
             }
-        } catch (err) { priceContainer.innerHTML = `<p style="color:red;">${err.message}</p>`; }
+        } catch (err) { priceStatus.innerText = '❌ Error al conectar.'; }
     });
 
+    // 2. Procesar Excel y volcarlo a la tabla (Pre-visualización)
+    priceExcelInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+            const data = new Uint8Array(evt.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const sheet = workbook.Sheets[workbook.SheetNames[0]];
+            const json = XLSX.utils.sheet_to_json(sheet);
+            
+            // Mapeamos el excel a la estructura de la tabla
+            const previewData = json.map(row => ({
+                product_id: row.ID || row.id || null, // Si no viene ID, el backend lo buscará por SKU
+                sku: row.SKU || row.sku,
+                name: row.Nombre || row.name || 'Carga desde Excel',
+                price: row.Precio || row.price || 0
+            }));
+
+            renderPriceRows(previewData);
+            priceStatus.innerHTML = '✨ <span style="color:green;">Excel cargado en la tabla. Revisa y guarda los cambios.</span>';
+        };
+        reader.readAsArrayBuffer(file);
+    });
+
+    // Función para dibujar las filas editables
+    const renderPriceRows = (data) => {
+        pricesTbody.innerHTML = '';
+        data.forEach(item => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><strong>${item.sku}</strong></td>
+                <td>${item.name}</td>
+                <td>
+                    <input type="number" step="0.01" class="price-input" 
+                           data-sku="${item.sku}" 
+                           data-pid="${item.product_id || ''}" 
+                           value="${item.price}">
+                </td>
+            `;
+            pricesTbody.appendChild(tr);
+        });
+        priceStatus.style.display = 'none';
+        pricesTable.style.display = 'table';
+        savePricesBtn.style.display = 'inline-flex';
+    };
+
+    // 3. Guardar cambios (Vengan de edición manual o de Excel)
     savePricesBtn.addEventListener('click', async () => {
         const nodeId = document.getElementById('price-node-select').value;
-        const status = document.getElementById('save-status');
         const inputs = document.querySelectorAll('.price-input');
-        
-        const prices = Array.from(inputs).map(input => ({
-            productId: input.getAttribute('data-pid'),
-            price: input.value
+        const prices = Array.from(inputs).map(inp => ({
+            productId: inp.getAttribute('data-pid'),
+            sku: inp.getAttribute('data-sku'),
+            price: inp.value
         }));
 
-        status.innerText = '⏳ Guardando...';
-        status.style.color = 'black';
+        savePricesBtn.disabled = true;
+        savePricesBtn.innerText = '⏳ Guardando...';
 
         try {
             const res = await fetch('/api/prices', {
@@ -522,10 +558,11 @@ if (loadPricesBtn) {
                 headers: { 'Content-Type': 'application/json' }
             });
             if (res.ok) {
-                status.innerText = '✅ Precios actualizados correctamente.';
-                status.style.color = 'green';
+                alert('✅ Lista de precios actualizada correctamente.');
+                savePricesBtn.innerText = '💾 Guardar Cambios en la Lista';
             }
-        } catch (err) { status.innerText = '❌ Error al guardar.'; status.style.color = 'red'; }
+        } catch (err) { alert('❌ Error al guardar.'); }
+        savePricesBtn.disabled = false;
     });
 }
 
