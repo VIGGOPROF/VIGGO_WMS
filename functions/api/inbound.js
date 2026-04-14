@@ -4,17 +4,20 @@ export async function onRequestPost(context) {
     const db = context.env.DB;
 
     const nodeId = parseInt(data.nodeId);
-    const items = data.items; // Siempre esperamos un array, sea de 1 o de 100 items
+    const items = data.items; 
 
     if (!nodeId || !items || items.length === 0) {
         return new Response(JSON.stringify({ error: "Datos incompletos para el ingreso." }), { status: 400 });
     }
 
+    // --- NUEVO: Extraer todas las fábricas válidas de la BD ---
+    const { results: validFactoriesQuery } = await db.prepare("SELECT name FROM factories").all();
+    const validFactories = new Set(validFactoriesQuery.map(f => f.name.toLowerCase()));
+
     const statements = [];
     let totalQty = 0;
 
     for (const item of items) {
-        // Normalizar nombres de columnas (por si en el Excel vienen en mayúsculas o sin tilde)
         const sku = (item.SKU || item.sku || '').toString().trim();
         const name = (item.Nombre || item.nombre || item.name || '').toString().trim();
         const category = (item.Categoria || item.Categoría || item.category || '').toString().trim();
@@ -23,8 +26,13 @@ export async function onRequestPost(context) {
 
         if (!sku || !qty || qty <= 0) continue;
 
-        // 1. Crear o Actualizar el Producto (Upsert)
-        // Si el SKU ya existe, solo actualizamos su categoría y fábrica para mantener la BD limpia.
+        // --- NUEVO: Validar Fábrica ---
+        if (factory && !validFactories.has(factory.toLowerCase())) {
+            return new Response(JSON.stringify({ 
+                error: `La fábrica "${factory}" del SKU ${sku} no está registrada. Por favor, créala en el sistema primero.` 
+            }), { status: 400 });
+        }
+
         statements.push(
             db.prepare(`
                 INSERT INTO products (sku, name, category, factory_name) 
@@ -36,8 +44,6 @@ export async function onRequestPost(context) {
             `).bind(sku, name || sku, category, factory)
         );
 
-        // 2. Sumar el Stock físico al Nodo seleccionado
-        // Usamos una subconsulta para obtener el product_id dinámicamente
         statements.push(
             db.prepare(`
                 INSERT INTO inventory (node_id, product_id, quantity)
@@ -52,15 +58,14 @@ export async function onRequestPost(context) {
     }
 
     if (statements.length === 0) {
-        return new Response(JSON.stringify({ error: "No se encontraron datos válidos para procesar." }), { status: 400 });
+        return new Response(JSON.stringify({ error: "No se encontraron datos válidos." }), { status: 400 });
     }
 
-    // Ejecutar todas las consultas en bloque
     await db.batch(statements);
 
     return new Response(JSON.stringify({ 
         status: "success", 
-        message: `Se ingresaron exitosamente ${totalQty} unidades al depósito seleccionado.` 
+        message: `Se ingresaron exitosamente ${totalQty} unidades.` 
     }), { headers: { "Content-Type": "application/json" } });
 
   } catch (error) {
