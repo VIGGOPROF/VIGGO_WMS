@@ -12,7 +12,7 @@
     if (!localStorage.getItem('viggo_auth_token')) {
         window.location.href = 'login.html';
     }
-</script>
+    </script>
     
     <style>
         /* Estilos para el selector de pestañas (Tabs) */
@@ -35,7 +35,7 @@
 </head>
 <body>
 
-  <div id="sidebar-container"></div>
+    <div id="sidebar-container"></div>
 
     <main class="main-content">
         <div class="module-container" style="max-width: 900px;">
@@ -53,8 +53,8 @@
             </div>
 
             <div class="tab-container">
-                <button class="tab-btn active" onclick="switchTab('manual')">✍️ Carga Manual</button>
-                <button class="tab-btn" onclick="switchTab('excel')">📑 Carga Masiva (Excel)</button>
+                <button class="tab-btn active" onclick="switchTab('manual', event)">✍️ Carga Manual</button>
+                <button class="tab-btn" onclick="switchTab('excel', event)">📑 Carga Masiva (Excel)</button>
             </div>
 
             <div id="tab-manual" class="tab-content active">
@@ -127,14 +127,13 @@
         </div>
     </main>
 
-    <script src="script.js"></script>
-    
     <script>
         // Cambiar entre manual y excel
-        function switchTab(tabId) {
+        // Se añade el parámetro (event) para mayor compatibilidad de navegadores
+        function switchTab(tabId, event) {
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-            event.currentTarget.classList.add('active');
+            if(event) event.currentTarget.classList.add('active');
             document.getElementById('tab-' + tabId).classList.add('active');
             document.getElementById('inbound-status').innerHTML = ''; 
         }
@@ -166,5 +165,8 @@
             }
         }
     </script>
+    
+    <script src="script.js"></script>
+
 </body>
 </html>
