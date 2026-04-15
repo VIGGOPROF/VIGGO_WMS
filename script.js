@@ -789,6 +789,45 @@ window.exportToPDF = (data) => {
     setTimeout(() => { printWindow.print(); }, 500);
 };
 
+// Función para inyectar el menú en cualquier pantalla
+async function loadSidebar() {
+    const container = document.getElementById('sidebar-container');
+    if (!container) return; // Si la pantalla no tiene el contenedor, no hace nada
+
+    try {
+        // 1. Traer el HTML del menú
+        const response = await fetch('sidebar.html');
+        const html = await response.text();
+        container.innerHTML = html;
+
+        // 2. Pintar el link activo según la URL actual
+        const currentPage = window.location.pathname.split('/').pop() || 'index.html';
+        const links = document.querySelectorAll('#main-nav a');
+        
+        links.forEach(link => {
+            // Limpia el href para comparar (por si acaso tiene / o ./)
+            const linkHref = link.getAttribute('href').replace('./', '');
+            
+            // Si la URL actual coincide con el link, o si tiene parámetros (ej: cuenta_corriente.html?id=5)
+            if (currentPage.includes(linkHref)) {
+                link.classList.add('active');
+            }
+        });
+
+        // 3. Cargar el nombre del usuario (Se hace aquí porque el HTML acaba de nacer)
+        const savedName = localStorage.getItem('viggo_user_name');
+        const savedRole = localStorage.getItem('viggo_user_role');
+        if (savedName) document.getElementById('user-display-name').innerText = `Usuario: ${savedName}`;
+        if (savedRole) document.getElementById('user-display-role').innerText = savedRole;
+
+    } catch (error) {
+        console.error('Error cargando el menú lateral:', error);
+    }
+}
+
+// Ejecutar automáticamente cuando la página termine de leer el HTML
+document.addEventListener('DOMContentLoaded', loadSidebar);
+
 // ====================================================================
 // UTILIDADES: GESTIÓN DE FÁBRICAS Y AUTOCOMPLETADO DE SKU
 // ====================================================================
@@ -913,3 +952,5 @@ document.getElementById('btn-add-node')?.addEventListener('click', async () => {
 });
 
 loadNodes();
+
+
