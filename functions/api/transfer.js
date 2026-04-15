@@ -1,93 +1,72 @@
 export async function onRequestPost(context) {
   try {
-    const data = await context.request.json();
     const db = context.env.DB;
+    const { origen, destino, transporte, containerNumber, items } = await context.request.json();
 
-    const origenId = parseInt(data.origen);
-    const destinoId = parseInt(data.destino);
-    const transId = parseInt(data.transporte);
-    const items = data.items; 
-
-    if (!items || items.length === 0) {
-        return new Response(JSON.stringify({ error: "No hay productos válidos para transferir." }), { status: 400 });
+    if (!origen || !destino || !items || items.length === 0) {
+      return new Response(JSON.stringify({ error: "Datos incompletos para el despacho." }), { status: 400 });
     }
 
-    const transQuery = await db.prepare("SELECT avg_days_lead FROM transport_methods WHERE id = ?").bind(transId).first();
-    const daysLead = transQuery ? transQuery.avg_days_lead : 0;
-    const etaDate = new Date();
-    etaDate.setDate(new Date().getDate() + daysLead);
+    // 1. Calcular tiempos logísticos
+    const daysToPort = transporte === 'avion' ? 15 : 60;
+    const clearanceDays = 7; // Días de aduana y flete interno
+    
+    const today = new Date();
+    
+    // ETA a Puerto
+    const etaPortDate = new Date(today);
+    etaPortDate.setDate(etaPortDate.getDate() + daysToPort);
+    const estimatedArrival = etaPortDate.toISOString().split('T')[0];
 
-    const transferRes = await db.prepare(`
-      INSERT INTO transfers (origin_node_id, destination_node_id, transport_method_id, status, dispatch_date, estimated_arrival)
-      VALUES (?, ?, ?, 'in_transit', CURRENT_TIMESTAMP, ?) RETURNING id
-    `).bind(origenId, destinoId, transId, etaDate.toISOString()).first();
+    // Fecha de Disponibilidad en Depósito (+7 días)
+    const availDate = new Date(etaPortDate);
+    availDate.setDate(availDate.getDate() + clearanceDays);
+    const availabilityDate = availDate.toISOString().split('T')[0];
 
-    const transferId = transferRes.id;
-    const statements = [];
     let totalInvoice = 0;
+    const container = containerNumber ? containerNumber.trim().toUpperCase() : 'PENDIENTE';
 
-    for (const item of items) {
-        const rawSku = item.SKU || item.sku || item.Sku;
-        if (!rawSku) continue;
-        const sku = rawSku.toString().trim();
-        const qty = parseInt(item.Cantidad || item.cantidad);
-        if (!qty || qty <= 0) continue;
+    // 2. Crear la cabecera de la transferencia (Ahora incluye Contenedor y Disponibilidad)
+    const transferResult = await db.prepare(`
+      INSERT INTO transfers (origin_node_id, destination_node_id, status, estimated_arrival, container_number, availability_date) 
+      VALUES (?, ?, 'in_transit', ?, ?, ?) RETURNING id
+    `).bind(origen, destino, estimatedArrival, container, availabilityDate).first();
 
-        const stockQuery = await db.prepare(`
-          SELECT p.id as product_id, i.quantity 
-          FROM products p
-          LEFT JOIN inventory i ON p.id = i.product_id AND i.node_id = ?
-          WHERE p.sku = ?
-        `).bind(origenId, sku).first();
+    const transferId = transferResult.id;
+    const statements = [];
 
-        if (!stockQuery || !stockQuery.product_id) {
-            await db.prepare("DELETE FROM transfers WHERE id = ?").bind(transferId).run(); 
-            return new Response(JSON.stringify({ error: `El SKU ${sku} no existe en la base de datos.` }), { status: 404 });
-        }
-        if (stockQuery.quantity < qty) {
-            await db.prepare("DELETE FROM transfers WHERE id = ?").bind(transferId).run(); 
-            return new Response(JSON.stringify({ error: `Stock físico insuficiente para el SKU ${sku}.` }), { status: 400 });
-        }
+    // 3. Procesar cada producto del Packing List
+    for (const row of items) {
+      let sku = row.SKU || row.sku;
+      let qty = parseInt(row.Cantidad || row.cantidad || row.Qty || row.qty, 10);
+      
+      if (!sku || isNaN(qty)) continue;
 
-        const productId = stockQuery.product_id;
+      const prod = await db.prepare('SELECT id, name FROM products WHERE sku = ?').bind(sku.trim()).first();
+      if (!prod) continue; // Si no existe, lo ignora (o podrías lanzar error)
 
-        const priceQuery = await db.prepare(`
-          SELECT pli.price FROM price_list_items pli
-          JOIN price_lists pl ON pli.price_list_id = pl.id
-          WHERE pl.node_id = ? AND pli.product_id = ?
-        `).bind(destinoId, productId).first();
-        
-        const unitPrice = priceQuery ? priceQuery.price : 0;
-        totalInvoice += (unitPrice * qty);
+      const priceResult = await db.prepare('SELECT price FROM prices WHERE product_id = ? AND node_id = ?').bind(prod.id, destino).first();
+      const unitPrice = priceResult ? priceResult.price : 0;
+      totalInvoice += (unitPrice * qty);
 
-        statements.push(db.prepare("UPDATE inventory SET quantity = quantity - ? WHERE node_id = ? AND product_id = ?").bind(qty, origenId, productId));
-        
-        statements.push(db.prepare(`
-          INSERT INTO inventory (node_id, product_id, reserved_quantity) 
-          VALUES (?, ?, ?) ON CONFLICT(node_id, product_id) DO UPDATE SET reserved_quantity = reserved_quantity + ?
-        `).bind(destinoId, productId, qty, qty));
-        
-        statements.push(db.prepare(`
-          INSERT INTO transfer_items (transfer_id, product_id, quantity, unit_price_at_transfer)
-          VALUES (?, ?, ?, ?)
-        `).bind(transferId, productId, qty, unitPrice));
-    }
-
-    if (statements.length === 0) {
-        await db.prepare("DELETE FROM transfers WHERE id = ?").bind(transferId).run();
-        return new Response(JSON.stringify({ error: "El Excel no tenía el formato correcto." }), { status: 400 });
+      // Descontar del origen
+      statements.push(db.prepare(`UPDATE inventory SET quantity = quantity - ? WHERE product_id = ? AND node_id = ?`).bind(qty, prod.id, origen));
+      
+      // Registrar el ítem en tránsito
+      statements.push(db.prepare(`INSERT INTO transfer_items (transfer_id, product_id, quantity, price) VALUES (?, ?, ?, ?)`).bind(transferId, prod.id, qty, unitPrice));
     }
 
     await db.batch(statements);
 
     return new Response(JSON.stringify({ 
-        status: "success", 
-        message: `Orden #${transferId} despachada.`,
-        eta: etaDate.toISOString().split('T')[0],
-        total_invoice: totalInvoice
+      status: "success", 
+      message: `Despacho asignado al Contenedor ${container}.`, 
+      eta: estimatedArrival, 
+      availability: availabilityDate,
+      total_invoice: totalInvoice 
     }), { headers: { "Content-Type": "application/json" } });
 
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), { status: 500 });
+    return new Response(JSON.stringify({ error: "Error de BD: " + error.message }), { status: 500 });
   }
 }
