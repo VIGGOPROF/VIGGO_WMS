@@ -12,27 +12,28 @@
     if (!localStorage.getItem('viggo_auth_token')) {
         window.location.href = 'login.html';
     }
-</script>
+    </script>
     
     <style>
-        .price-controls { background: #f8fafc; border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin-bottom: 25px; display: flex; gap: 20px; align-items: flex-end; }
-        .price-table-container { background: white; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .price-controls { background: #f8fafc; border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin-bottom: 25px; display: flex; gap: 20px; align-items: flex-end; flex-wrap: wrap; }
+        .price-table-container { background: white; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow-x: auto; }
         
         /* Estilo de tabla editable */
-        .editable-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+        .editable-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; min-width: 600px; }
         .editable-table th, .editable-table td { padding: 12px 15px; border-bottom: 1px solid var(--border); border-right: 1px solid var(--border); }
         .editable-table th { background: #f1f5f9; color: var(--primary); font-weight: 700; text-align: left; position: sticky; top: 0; }
         .editable-table input { width: 100%; border: 1px solid transparent; background: transparent; padding: 5px; font-family: inherit; font-size: inherit; text-align: right; transition: all 0.2s; }
         .editable-table input:focus { border-color: var(--accent); background: white; outline: none; border-radius: 4px; box-shadow: 0 0 0 2px rgba(37,99,235,0.1); }
         .editable-table tr:hover { background: #f8fafc; }
         
-        .upload-mini { border: 2px dashed #cbd5e1; padding: 10px; border-radius: 8px; text-align: center; cursor: pointer; font-size: 0.8rem; color: var(--text-muted); flex: 1; }
+        .upload-mini { border: 2px dashed #cbd5e1; padding: 10px; border-radius: 8px; text-align: center; cursor: pointer; font-size: 0.8rem; color: var(--text-muted); flex: 1; min-width: 200px; }
         .upload-mini:hover { border-color: var(--accent); background: #eff6ff; }
     </style>
 </head>
 <body>
 
-<div id="sidebar-container"></div>
+  <div id="sidebar-container"></div>
+
   <main class="main-content">
       <div class="module-container" style="max-width: 1100px;">
           <header>
@@ -41,26 +42,26 @@
           </header>
 
           <div class="price-controls">
-              <div class="form-group" style="flex: 1; margin: 0;">
-                  <label>País / Lista de Destino:</label>
-                  <select id="price-node-select">
-                      <option value="2">Argentina HQ</option>
-                      <option value="3">Paraguay Dist.</option>
-                      <option value="4">Chile Filial</option>
+              <div class="form-group" style="flex: 1; margin: 0; min-width: 250px;">
+                  <label style="display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.85rem; color: #475569;">País / Lista de Destino:</label>
+                  <select id="price-node-select" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1;">
+                      <option value="">Cargando depósitos...</option>
                   </select>
               </div>
 
               <label class="upload-mini" for="price-excel-file">
-                  <span>📂 Carga Masiva (Excel)</span>
+                  <span style="display: block; font-weight: bold; font-size: 0.9rem; color: var(--primary);">📂 Carga Masiva (Excel)</span>
                   <input type="file" id="price-excel-file" accept=".xlsx, .xls" style="display:none;">
               </label>
 
-              <button id="load-prices-btn" style="height: 45px;">Consultar Lista</button>
+              <button id="load-prices-btn" style="height: 45px; background: var(--primary); color: white; border: none; padding: 0 20px; border-radius: 6px; font-weight: bold; cursor: pointer;">
+                  Consultar Lista
+              </button>
           </div>
 
           <div class="price-table-container">
-              <div id="price-list-status" style="padding: 20px; text-align: center; color: var(--text-muted);">
-                  Selecciona un país para ver o editar precios.
+              <div id="price-list-status" style="padding: 40px 20px; text-align: center; color: var(--text-muted); background: #f8fafc;">
+                  Selecciona un país y haz clic en "Consultar Lista" para ver o editar precios.
               </div>
               <table class="editable-table" id="prices-table" style="display: none;">
                   <thead>
@@ -76,12 +77,34 @@
           </div>
 
           <div style="display: flex; justify-content: flex-end; margin-top: 20px;">
-              <button id="save-prices-btn" style="display: none; background: var(--success);">
+              <button id="save-prices-btn" style="display: none; background: #10b981; color: white; border: none; padding: 12px 25px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 1rem;">
                   💾 Guardar Cambios en la Lista
               </button>
           </div>
       </div>
   </main>
+
+  <script>
+      // --- MOTOR DE ARRANQUE PARA CARGAR LOS PAÍSES ---
+      document.addEventListener("DOMContentLoaded", async () => {
+          const select = document.getElementById('price-node-select');
+          try {
+              const res = await fetch('/api/nodes');
+              const result = await res.json();
+              if (res.ok && result.data) {
+                  select.innerHTML = '<option value="">Seleccione una lista de precios...</option>';
+                  result.data.forEach(n => {
+                      // Filtramos para no mostrar a Fábrica como una lista de precios de venta
+                      if (!n.name.toLowerCase().includes('fabrica') && !n.name.toLowerCase().includes('fábrica')) {
+                          select.innerHTML += `<option value="${n.id}">${n.name}</option>`;
+                      }
+                  });
+              }
+          } catch (e) {
+              select.innerHTML = '<option value="">Error al cargar países</option>';
+          }
+      });
+  </script>
 
   <script src="script.js"></script>
 </body>
