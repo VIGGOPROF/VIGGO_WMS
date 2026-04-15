@@ -161,6 +161,12 @@
     </main>
 
     <script>
+        // --- MOTOR DE ARRANQUE AÑADIDO ---
+        document.addEventListener("DOMContentLoaded", () => {
+            loadFactories();
+            loadNodes();
+        });
+
         // --- 1. LÓGICA DE FÁBRICAS ---
         const loadFactories = async () => {
             const list = document.getElementById('factory-list');
@@ -284,10 +290,8 @@
             };
             reader.readAsArrayBuffer(catalogFile.files[0]);
         });
-
-        // Inicialización
-        loadFactories();
-        loadNodes();
     </script>
+    
+    <script src="script.js"></script>
 </body>
 </html>
