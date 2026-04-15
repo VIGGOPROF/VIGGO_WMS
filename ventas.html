@@ -136,10 +136,8 @@
         let cart = []; 
 
         document.addEventListener("DOMContentLoaded", () => {
-            const savedName = localStorage.getItem('viggo_user_name');
-            if (savedName) document.getElementById('user-display-name').innerText = `Usuario: ${savedName}`;
-            loadClients();
-        });
+    loadClients();
+});
 
         const getUserIdLocal = () => {
             const token = localStorage.getItem('viggo_auth_token');
