@@ -12,12 +12,12 @@
     if (!localStorage.getItem('viggo_auth_token')) {
         window.location.href = 'login.html';
     }
-</script>
+    </script>
     
 </head>
 <body>
 
-  <div id="sidebar-container"></div>
+    <div id="sidebar-container"></div>
 
     <main class="main-content">
         <div class="module-container">
@@ -84,8 +84,6 @@
         </div>
     </main>
 
-    <script src="script.js"></script>
-
     <script>
         document.addEventListener("DOMContentLoaded", async () => {
             const origenSelect = document.getElementById('origen-select');
@@ -111,5 +109,8 @@
             }
         });
     </script>
+    
+    <script src="script.js"></script>
+
 </body>
 </html>
