@@ -109,9 +109,7 @@
 
     <script>
         document.addEventListener("DOMContentLoaded", () => {
-            const savedName = localStorage.getItem('viggo_user_name');
-            if (savedName) document.getElementById('user-display-name').innerText = `Usuario: ${savedName}`;
-            
+            // LÍNEAS VIEJAS ELIMINADAS AQUÍ - Solo cargamos los datos
             loadSaldos();
             loadValorizacion();
         });
@@ -219,5 +217,7 @@
             } catch (e) { console.error("Error", e); }
         };
     </script>
+    
+    <script src="script.js"></script>
 </body>
 </html>
