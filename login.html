@@ -5,6 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Acceso | VIGGO WMS</title>
     <link rel="stylesheet" href="style.css">
+
+    <script>
+    // Candado de Seguridad VIGGO
+    if (!localStorage.getItem('viggo_auth_token')) {
+        window.location.href = 'login.html';
+    }
+</script>
+    
     <style>
         body { background: #0f172a; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         .login-card { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5); width: 100%; max-width: 380px; text-align: center; }
