@@ -111,14 +111,14 @@
         const urlParams = new URLSearchParams(window.location.search);
         const clientId = urlParams.get('client_id');
 
-       document.addEventListener("DOMContentLoaded", () => {
-    if (!clientId) {
-        alert("No se especificó un cliente.");
-        window.location.href = 'clientes.html';
-        return;
-    }
-    loadAccount();
-});
+        document.addEventListener("DOMContentLoaded", () => {
+            if (!clientId) {
+                alert("No se especificó un cliente.");
+                window.location.href = 'clientes.html';
+                return;
+            }
+            loadAccount();
+        });
 
         const getUserIdLocal = () => {
             const token = localStorage.getItem('viggo_auth_token');
@@ -243,5 +243,7 @@
             }
         });
     </script>
+    
+    <script src="script.js"></script>
 </body>
 </html>
