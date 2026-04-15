@@ -1,4 +1,4 @@
-// 1. CONSULTAR PRECIOS (GET)
+// 1. CONSULTAR PRECIOS Y STOCK (GET)
 export async function onRequestGet(context) {
   try {
     const db = context.env.DB;
@@ -10,18 +10,22 @@ export async function onRequestGet(context) {
       return new Response(JSON.stringify({ error: "Debe especificar un país válido." }), { status: 400 });
     }
 
+    // NUEVO: Ahora también trae el STOCK (i.quantity) del depósito seleccionado
     const query = `
       SELECT 
         p.id as product_id,
         p.sku,
         p.name,
-        COALESCE(pr.price, 0) as price
+        COALESCE(pr.price, 0) as price,
+        COALESCE(i.quantity, 0) as stock
       FROM products p
       LEFT JOIN prices pr ON p.id = pr.product_id AND pr.node_id = ?
+      LEFT JOIN inventory i ON p.id = i.product_id AND i.node_id = ?
       ORDER BY p.sku ASC
     `;
 
-    const { results } = await db.prepare(query).bind(nodeId).all();
+    // Pasamos nodeId dos veces (uno para precios, otro para inventario)
+    const { results } = await db.prepare(query).bind(nodeId, nodeId).all();
 
     return new Response(JSON.stringify({ status: "success", data: results }), { headers: { "Content-Type": "application/json" } });
   } catch (error) {
@@ -35,7 +39,7 @@ export async function onRequestPost(context) {
     const db = context.env.DB;
     const payload = await context.request.json();
     const nodeId = parseInt(payload.nodeId, 10);
-    const userId = payload.userId; // Capturamos el usuario
+    const userId = payload.userId;
 
     if (!nodeId || isNaN(nodeId)) {
       return new Response(JSON.stringify({ error: "Falta seleccionar el país/depósito de destino." }), { status: 400 });
@@ -49,7 +53,7 @@ export async function onRequestPost(context) {
       if (isNaN(productId) && item.sku) {
         const prod = await db.prepare('SELECT id FROM products WHERE sku = ?').bind(item.sku.trim()).first();
         if (!prod) {
-          return new Response(JSON.stringify({ error: `El SKU "${item.sku}" no existe en el sistema. Créalo en el Catálogo primero.` }), { status: 400 });
+          return new Response(JSON.stringify({ error: `El SKU "${item.sku}" no existe en el sistema.` }), { status: 400 });
         }
         productId = parseInt(prod.id, 10);
       }
@@ -66,7 +70,6 @@ export async function onRequestPost(context) {
       }
     }
 
-    // Registro de Auditoría
     if (userId && statements.length > 0) {
        const desc = `Actualizó lista de precios para el nodo ${nodeId} (${payload.prices.length} productos)`;
        statements.push(
