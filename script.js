@@ -98,7 +98,7 @@ if (btnExcel) {
 }
 
 // ====================================================================
-// MÓDULO 2: DISTRIBUCIÓN Y FACTURACIÓN (Por Lote Excel)
+// MÓDULO 2: DISTRIBUCIÓN Y FACTURACIÓN (Actualizado con Contenedor)
 // ====================================================================
 const dispatchBtn = document.getElementById('dispatch-btn');
 
@@ -107,6 +107,7 @@ if (dispatchBtn) {
         const origen = document.getElementById('origen-select').value;
         const destino = document.getElementById('destino-select').value;
         const transporte = document.getElementById('transporte-select').value;
+        const containerNumber = document.getElementById('container-input')?.value || ''; // Capturamos contenedor
         const fileInput = document.getElementById('dist-excel-file');
         const statusBox = document.getElementById('transfer-status');
 
@@ -133,38 +134,33 @@ if (dispatchBtn) {
                 const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
                 const jsonData = XLSX.utils.sheet_to_json(firstSheet);
 
-                if (jsonData.length === 0) {
-                    statusBox.innerHTML = '⚠️ <span style="color:red;">El Excel está vacío.</span>';
-                    dispatchBtn.disabled = false;
-                    return;
-                }
+                if (jsonData.length === 0) throw new Error("Excel vacío");
 
-                statusBox.innerHTML = `🚀 <span style="color:black;">Validando stock de ${jsonData.length} líneas...</span>`;
+                statusBox.innerHTML = `🚀 <span style="color:black;">Asignando contenedor y despachando...</span>`;
 
                 const res = await fetch('/api/transfer', {
                     method: 'POST',
-                    body: JSON.stringify({ origen, destino, transporte, items: jsonData }),
+                    body: JSON.stringify({ origen, destino, transporte, containerNumber, items: jsonData }),
                     headers: { 'Content-Type': 'application/json' }
                 });
 
                 const result = await res.json();
 
                 if (res.ok) {
-                    statusBox.innerHTML = `<span style="color:green;">✅ ${result.message} ETA: ${result.eta} | Factura: $${result.total_invoice.toFixed(2)}</span>`;
-                    // Resetear el formulario visual
+                    statusBox.innerHTML = `<span style="color:green;">✅ ${result.message}<br>🚢 ETA Puerto: ${result.eta} | 🏢 Disp. Depósito: ${result.availability}</span>`;
                     document.getElementById('dist-drop-zone').style.display = 'block';
                     document.getElementById('dist-file-info').style.display = 'none';
                     fileInput.value = '';
+                    if(document.getElementById('container-input')) document.getElementById('container-input').value = '';
                 } else {
                     statusBox.innerHTML = `❌ <span style="color:red;">${result.error}</span>`;
                 }
             } catch (error) {
-                statusBox.innerHTML = `❌ <span style="color:red;">Error de conexión: ${error.message}</span>`;
+                statusBox.innerHTML = `❌ <span style="color:red;">Error: Revisa el formato del Excel.</span>`;
             } finally {
                 dispatchBtn.disabled = false;
             }
         };
-
         reader.readAsArrayBuffer(file);
     });
 }
@@ -406,11 +402,12 @@ if (searchTransitBtn) {
 }
 
 // ====================================================================
-// MÓDULO: RADAR EN TRÁNSITO
+// MÓDULO 5: RADAR EN TRÁNSITO
 // ====================================================================
 const transitViewContainer = document.getElementById('active-transits-container');
 const filterOrigin = document.getElementById('filter-origin');
 const filterDest = document.getElementById('filter-dest');
+const searchTransit = document.getElementById('search-transit'); // Input opcional en HTML para buscar contenedor/SKU
 const refreshTransitsBtn = document.getElementById('refresh-transits');
 
 if (transitViewContainer) {
@@ -441,14 +438,23 @@ if (transitViewContainer) {
             return;
         }
 
-        const origFilter = filterOrigin.value;
-        const destFilter = filterDest.value;
+        const origFilter = filterOrigin ? filterOrigin.value : 'ALL';
+        const destFilter = filterDest ? filterDest.value : 'ALL';
+        const searchTerm = searchTransit ? searchTransit.value.toLowerCase().trim() : '';
 
         // Filtrar datos en vivo
         const filtered = window.transitData.filter(item => {
             const matchOrig = origFilter === 'ALL' || item.origin === origFilter;
             const matchDest = destFilter === 'ALL' || item.destination === destFilter;
-            return matchOrig && matchDest;
+            
+            // Lógica para buscar por número de contenedor, SKU o nombre de producto
+            const containerStr = (item.container_number || 'PENDIENTE').toLowerCase();
+            const skuStr = (item.sku || '').toLowerCase();
+            const prodStr = (item.product || '').toLowerCase();
+            
+            const matchSearch = !searchTerm || containerStr.includes(searchTerm) || skuStr.includes(searchTerm) || prodStr.includes(searchTerm);
+
+            return matchOrig && matchDest && matchSearch;
         });
 
         if (filtered.length === 0) {
@@ -460,30 +466,44 @@ if (transitViewContainer) {
             <table class="excel-table">
                 <thead>
                     <tr>
-                        <th style="width: 100px;">Orden #</th>
+                        <th>📦 Contenedor</th>
                         <th>🛫 Origen</th>
                         <th>🛬 Destino</th>
                         <th>SKU</th>
                         <th>Producto</th>
-                        <th>Cantidad</th>
-                        <th>ETA (Llegada)</th>
+                        <th style="text-align:center;">Cantidad</th>
+                        <th>🚢 ETA Puerto</th>
+                        <th style="color:#10b981;">🏢 Disp. Depósito</th>
                     </tr>
                 </thead>
                 <tbody>
         `;
 
         filtered.forEach(item => {
-            const etaDate = new Date(item.estimated_arrival).toLocaleDateString('es-ES');
+            // Función segura para formatear las fechas a DD/MM/YYYY
+            const formatD = (dStr) => {
+                if(!dStr) return 'Calculando...';
+                try {
+                    const parts = dStr.split('T')[0].split('-');
+                    if(parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+                    return dStr;
+                } catch(e) { return dStr; }
+            };
+
+            const etaDate = formatD(item.estimated_arrival);
+            const availDate = formatD(item.availability_date);
+            const containerDisplay = item.container_number || 'PENDIENTE';
             
             html += `
                 <tr>
-                    <td style="text-align:center;"><strong>${item.transfer_id}</strong></td>
+                    <td><strong style="color: #0369a1;">${containerDisplay.toUpperCase()}</strong></td>
                     <td>${item.origin}</td>
                     <td>${item.destination}</td>
                     <td><strong>${item.sku}</strong></td>
                     <td>${item.product}</td>
-                    <td style="color: #d97706; font-weight:bold;">${item.quantity}</td>
+                    <td style="color: #d97706; font-weight:bold; text-align:center;">${item.quantity}</td>
                     <td style="font-weight:500;">${etaDate}</td>
+                    <td style="font-weight:bold; color:#10b981;">${availDate}</td>
                 </tr>
             `;
         });
@@ -492,9 +512,10 @@ if (transitViewContainer) {
         transitViewContainer.innerHTML = html;
     };
 
-    // Listeners para re-dibujar la tabla al instante cuando tocas un filtro
+    // Listeners para re-dibujar la tabla al instante cuando tocas un filtro o escribes
     if (filterOrigin) filterOrigin.addEventListener('change', renderTransitTable);
     if (filterDest) filterDest.addEventListener('change', renderTransitTable);
+    if (searchTransit) searchTransit.addEventListener('input', renderTransitTable);
     if (refreshTransitsBtn) refreshTransitsBtn.addEventListener('click', loadActiveTransits);
 
     // Cargar datos al abrir la página
