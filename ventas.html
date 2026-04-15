@@ -44,7 +44,7 @@
 </head>
 <body>
 
-  <div id="sidebar-container"></div>
+    <div id="sidebar-container"></div>
     
     <main class="main-content">
         <div class="module-container">
@@ -135,9 +135,10 @@
         let priceList = new Map(); 
         let cart = []; 
 
-     document.addEventListener("DOMContentLoaded", () => {
-    loadClients();
-});
+        // --- MOTOR DE ARRANQUE LIMPIO ---
+        document.addEventListener("DOMContentLoaded", () => {
+            loadClients();
+        });
 
         const getUserIdLocal = () => {
             const token = localStorage.getItem('viggo_auth_token');
@@ -199,7 +200,6 @@
                 if (res.ok && result.data) {
                     priceList.clear();
                     result.data.forEach(p => {
-                        // Guardamos precio y también STOCK
                         priceList.set(p.sku.toUpperCase(), { sku: p.sku, name: p.name, price: p.price, stock: p.stock });
                     });
                     document.getElementById('cc-node').innerHTML = `📍 Lista de Precios Activa: ${currentClient.node_name} ✅`;
