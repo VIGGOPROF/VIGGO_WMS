@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Compras y Producción | VIGGO WMS</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* Estilos específicos para Compras */
+        .summary-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .card { background: white; padding: 15px 20px; border-radius: 8px; border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .card h4 { margin: 0; color: var(--text-muted); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; }
+        .card .value { font-size: 1.8rem; font-weight: bold; color: var(--primary); margin: 5px 0 0 0; }
+        
+        .upload-section { background: #f8fafc; border: 1px dashed #cbd5e1; padding: 20px; border-radius: 8px; text-align: center; margin-bottom: 20px; }
+        .upload-section p { margin-top: 0; color: var(--text-main); font-weight: 500; }
+        .format-table { width: auto; margin: 10px auto; background: white; font-size: 0.8rem; border-collapse: collapse; }
+        .format-table th, .format-table td { border: 1px solid #e2e8f0; padding: 4px 10px; color: #64748b; }
+        .format-table th { background: #f1f5f9; font-weight: bold; }
+
+        .filters { display: flex; gap: 15px; margin-bottom: 15px; align-items: center; background: white; padding: 10px 15px; border-radius: 8px; border: 1px solid var(--border); }
+        .filters input, .filters select { padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; outline: none; }
+        
+        .excel-table th { background: #0f172a; color: white; padding: 10px; font-size: 0.85rem; text-align: left; }
+        .excel-table td { padding: 10px; border-bottom: 1px solid #e2e8f0; font-size: 0.85rem; vertical-align: middle; }
+        .row-overdue { background-color: #fef2f2 !important; }
+        .row-completed { background-color: #f0fdf4 !important; opacity: 0.7; }
+        
+        .badge { padding: 3px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; }
+        .badge-pending { background: #fef3c7; color: #b45309; }
+        .badge-partial { background: #e0f2fe; color: #0369a1; }
+        .badge-completed { background: #dcfce3; color: #166534; }
+
+        .btn-action { background: var(--primary); color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.8rem; }
+        .btn-action:hover { background: #1e293b; }
+        .btn-action:disabled { background: #cbd5e1; cursor: not-allowed; }
+
+        /* Modal de Recepción */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; }
+        .modal { background: white; padding: 25px; border-radius: 12px; width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+        .modal h3 { margin-top: 0; color: #0f172a; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px; }
+        .modal-group { margin-bottom: 15px; }
+        .modal-group label { display: block; font-size: 0.85rem; font-weight: bold; margin-bottom: 5px; color: #475569; }
+        .modal-group input, .modal-group select { width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+        .btn-cancel { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 8px 15px; border-radius: 6px; cursor: pointer; }
+        .btn-confirm { background: #10b981; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="brand-logo">V</div>
+            <div class="brand-text"><strong>Usuario: Admin</strong><small>Control Logístico</small></div>
+        </div>
+        <nav class="nav">
+            <a href="dashboard.html"><span class="nav-icon">📊</span> Dashboard</a>
+            <a href="compras.html" class="active"><span class="nav-icon">🏭</span> Compras (Fábrica)</a>
+            <a href="catalogo.html"><span class="nav-icon">📖</span> Catálogo</a>
+            <a href="index.html"><span class="nav-icon">📦</span> Ingreso (Manual)</a>
+            <a href="distribucion.html"><span class="nav-icon">🚛</span> Distribución</a>
+            <a href="transito.html"><span class="nav-icon">🚢</span> En Tránsito</a>
+            <a href="recepcion.html"><span class="nav-icon">📥</span> Recepción Destino</a>
+            <a href="precios.html"><span class="nav-icon">💰</span> Precios</a>
+            <a href="documentos.html"><span class="nav-icon">📄</span> Documentos</a>
+            <a href="informes.html"><span class="nav-icon">📈</span> Informes</a>
+        </nav>
+    </aside>
+
+    <main class="main-content">
+        <div class="module-container">
+            <header>
+                <h2>Gestor de Abastecimiento Global</h2>
+                <p>Control de Órdenes de Producción y consolidación de stock en Origen.</p>
+            </header>
+
+            <div class="summary-cards">
+                <div class="card">
+                    <h4>Órdenes Activas</h4>
+                    <p class="value" id="kpi-orders">0</p>
+                </div>
+                <div class="card">
+                    <h4>Unidades en Producción</h4>
+                    <p class="value" id="kpi-pending" style="color: #f59e0b;">0</p>
+                </div>
+                <div class="card">
+                    <h4>Unidades Consolidadas</h4>
+                    <p class="value" id="kpi-received" style="color: #10b981;">0</p>
+                </div>
+            </div>
+
+            <div class="upload-section">
+                <p>📤 Emitir Nuevas Órdenes a Fábrica (Carga Masiva)</p>
+                <div style="display: flex; justify-content: center; align-items: center; gap: 15px; margin-bottom: 10px;">
+                    <input type="file" id="po-excel-file" accept=".xlsx, .xls, .csv" style="padding: 5px; border: 1px solid #cbd5e1; background: white; border-radius: 4px;">
+                    <button id="btn-upload-po" class="btn-action" style="padding: 8px 20px;">Procesar Excel</button>
+                </div>
+                <div id="upload-status" style="font-size: 0.85rem; font-weight: bold; margin-bottom: 10px;"></div>
+                
+                <p style="font-size: 0.75rem; color: #64748b; margin-bottom: 5px;">Formato estricto requerido en la primera fila:</p>
+                <table class="format-table">
+                    <tr><th>OC</th><th>Proveedor</th><th>Fecha_OC</th><th>SKU</th><th>Articulo</th><th>Cantidad</th><th>Dias_Fab</th><th>Proy_Venta</th></tr>
+                    <tr><td>OC-2025-01</td><td>MINGHENG</td><td>01/09/2025</td><td>SCV001</td><td>SCISSOR V-100</td><td>1000</td><td>50</td><td>Navidad 25</td></tr>
+                </table>
+            </div>
+
+            <div class="filters">
+                <strong>Filtros:</strong>
+                <input type="text" id="search-input" placeholder="🔍 Buscar OC, SKU o Proveedor..." style="width: 250px;">
+                <select id="status-filter">
+                    <option value="ALL">Todos los Estados</option>
+                    <option value="Pendiente">Solo Pendientes / En Producción</option>
+                    <option value="Parcial">Ingreso Parcial</option>
+                    <option value="Completada">Completadas</option>
+                </select>
+                <button onclick="loadPurchases()" class="btn-cancel" style="padding: 6px 12px; margin-left: auto;">🔄 Actualizar</button>
+            </div>
+
+            <div style="overflow-x: auto; background: white; border: 1px solid var(--border); border-radius: 8px;">
+                <table class="excel-table" style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr>
+                            <th>Orden (OC)</th>
+                            <th>Proveedor</th>
+                            <th>SKU / Producto</th>
+                            <th style="text-align: center;">Pedidas</th>
+                            <th style="text-align: center; color: #10b981;">Recibidas</th>
+                            <th style="text-align: center; color: #f59e0b;">Saldo Pend.</th>
+                            <th>Emisión</th>
+                            <th>ETA China</th>
+                            <th>Estado</th>
+                            <th style="text-align: center;">Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody id="po-tbody">
+                        <tr><td colspan="10" style="text-align: center; padding: 20px;">Cargando base de datos de producción...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <div class="modal-overlay" id="receive-modal">
+        <div class="modal">
+            <h3>📥 Confirmar Recepción en Origen</h3>
+            <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 15px;">Registrar ingreso físico en depósitos asiáticos.</p>
+            
+            <div class="modal-group">
+                <label>Orden / SKU Seleccionado:</label>
+                <input type="text" id="modal-info" disabled style="background: #f1f5f9; font-weight: bold;">
+                <input type="hidden" id="modal-oc">
+                <input type="hidden" id="modal-sku">
+            </div>
+
+            <div class="modal-group">
+                <label>Cantidad a Ingresar (Física):</label>
+                <input type="number" id="modal-qty" min="1">
+                <small id="modal-max-help" style="color: #f59e0b; font-size: 0.75rem;"></small>
+            </div>
+
+            <div class="modal-group">
+                <label>Destino de Consolidación:</label>
+                <select id="modal-node">
+                    <option value="">Cargando nodos...</option>
+                </select>
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
+                <button class="btn-confirm" id="btn-confirm-receive">Confirmar y Actualizar Stock</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentPurchases = [];
+        let globalNodes = [];
+
+        // 1. Inicialización y Carga de Nodos
+        const init = async () => {
+            try {
+                const res = await fetch('/api/nodes');
+                const result = await res.json();
+                if (res.ok && result.data) {
+                    globalNodes = result.data;
+                    const select = document.getElementById('modal-node');
+                    select.innerHTML = '<option value="">Seleccione depósito en China...</option>';
+                    // Filtramos solo para mostrar depósitos que suenen a origen (o mostramos todos)
+                    globalNodes.forEach(n => {
+                        select.innerHTML += `<option value="${n.id}">${n.name}</option>`;
+                    });
+                }
+            } catch (e) { console.error("Error cargando nodos", e); }
+            
+            loadPurchases();
+        };
+
+        // 2. Cargar Tabla de Compras
+        const loadPurchases = async () => {
+            const tbody = document.getElementById('po-tbody');
+            tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;">⏳ Conectando con servidor...</td></tr>';
+            
+            try {
+                const res = await fetch('/api/purchases');
+                const result = await res.json();
+                
+                if (res.ok && result.data) {
+                    currentPurchases = result.data;
+                    renderTable();
+                    updateKPIs();
+                } else {
+                    tbody.innerHTML = `<tr><td colspan="10" style="color:red; text-align:center;">❌ Error: ${result.error || 'Base de datos vacía'}</td></tr>`;
+                }
+            } catch (err) {
+                tbody.innerHTML = `<tr><td colspan="10" style="color:red; text-align:center;">❌ Error de red: ${err.message}</td></tr>`;
+            }
+        };
+
+        // 3. Renderizar Tabla con Semáforos y Filtros
+        const renderTable = () => {
+            const tbody = document.getElementById('po-tbody');
+            const searchTerm = document.getElementById('search-input').value.toLowerCase();
+            const statusFilter = document.getElementById('status-filter').value;
+            const today = new Date().toISOString().split('T')[0];
+
+            let html = '';
+            
+            currentPurchases.forEach(item => {
+                // Filtros
+                if (statusFilter !== 'ALL' && item.status !== statusFilter) return;
+                const searchString = `${item.oc_number} ${item.sku} ${item.product_name} ${item.provider}`.toLowerCase();
+                if (searchTerm && !searchString.includes(searchTerm)) return;
+
+                // Semáforo de Atraso
+                const isOverdue = (item.expected_eta < today) && (item.pending_qty > 0);
+                const isCompleted = item.pending_qty === 0;
+                
+                let rowClass = '';
+                if (isCompleted) rowClass = 'row-completed';
+                else if (isOverdue) rowClass = 'row-overdue';
+
+                // Badges de Estado
+                let badgeClass = 'badge-pending';
+                if (item.status === 'Parcial') badgeClass = 'badge-partial';
+                if (item.status === 'Completada') badgeClass = 'badge-completed';
+
+                // Formateo de fechas para que se lean bien
+                const formatD = (dStr) => {
+                    if(!dStr) return '-';
+                    const parts = dStr.split('-');
+                    if(parts.length===3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+                    return dStr; // fallback si viene en otro formato
+                };
+
+                html += `
+                    <tr class="${rowClass}">
+                        <td><strong>${item.oc_number}</strong></td>
+                        <td>${item.provider}</td>
+                        <td>
+                            <strong>${item.sku}</strong><br>
+                            <span style="font-size:0.75rem; color:#64748b;">${item.product_name}</span>
+                        </td>
+                        <td style="text-align: center; font-weight:bold;">${item.qty_ordered}</td>
+                        <td style="text-align: center; color:#10b981; font-weight:bold;">${item.qty_received}</td>
+                        <td style="text-align: center; color:#f59e0b; font-weight:bold; font-size:1.1em;">${item.pending_qty}</td>
+                        <td>${item.order_date}</td>
+                        <td style="font-weight:bold; color: ${isOverdue ? '#ef4444' : 'inherit'};">
+                            ${isOverdue ? '⚠️ ' : ''}${formatD(item.expected_eta)}
+                        </td>
+                        <td><span class="badge ${badgeClass}">${item.status}</span></td>
+                        <td style="text-align: center;">
+                            <button class="btn-action" 
+                                ${isCompleted ? 'disabled' : ''} 
+                                onclick="openModal('${item.oc_number}', '${item.sku}', ${item.pending_qty})">
+                                ${isCompleted ? '✔' : '📥 Recibir'}
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            tbody.innerHTML = html || '<tr><td colspan="10" style="text-align:center;">No hay resultados para mostrar.</td></tr>';
+        };
+
+        // 4. Actualizar Tarjetas KPI
+        const updateKPIs = () => {
+            const uniqueOCs = new Set(currentPurchases.filter(p => p.pending_qty > 0).map(p => p.oc_number));
+            let totalPending = 0;
+            let totalReceived = 0;
+
+            currentPurchases.forEach(p => {
+                totalPending += p.pending_qty;
+                totalReceived += p.qty_received;
+            });
+
+            document.getElementById('kpi-orders').innerText = uniqueOCs.size;
+            document.getElementById('kpi-pending').innerText = totalPending.toLocaleString();
+            document.getElementById('kpi-received').innerText = totalReceived.toLocaleString();
+        };
+
+        // Listeners de Filtros
+        document.getElementById('search-input').addEventListener('input', renderTable);
+        document.getElementById('status-filter').addEventListener('change', renderTable);
+
+        // 5. Carga de Excel (Emisión de Orden)
+        document.getElementById('btn-upload-po').addEventListener('click', () => {
+            const fileInput = document.getElementById('po-excel-file');
+            const statusBox = document.getElementById('upload-status');
+            
+            if (!fileInput.files.length) {
+                statusBox.innerHTML = '⚠️ <span style="color:red;">Selecciona el archivo Excel primero.</span>';
+                return;
+            }
+
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+
+            reader.onload = async (e) => {
+                statusBox.innerHTML = '⏳ <span style="color:black;">Validando y emitiendo orden...</span>';
+                document.getElementById('btn-upload-po').disabled = true;
+
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const json = XLSX.utils.sheet_to_json(sheet);
+
+                    if (json.length === 0) throw new Error("Excel vacío");
+
+                    const res = await fetch('/api/purchases', {
+                        method: 'POST',
+                        body: JSON.stringify({ items: json }),
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+
+                    const result = await res.json();
+                    if (res.ok) {
+                        statusBox.innerHTML = `✅ <span style="color:green;">${result.message}</span>`;
+                        fileInput.value = '';
+                        loadPurchases(); // Recargar tabla
+                    } else {
+                        statusBox.innerHTML = `❌ <span style="color:red;">${result.error}</span>`;
+                    }
+                } catch (error) {
+                    statusBox.innerHTML = `❌ <span style="color:red;">Error leyendo Excel: Revisa el formato.</span>`;
+                } finally {
+                    document.getElementById('btn-upload-po').disabled = false;
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        });
+
+        // 6. Lógica del Modal de Recepción
+        const modal = document.getElementById('receive-modal');
+        
+        window.openModal = (oc, sku, pending) => {
+            document.getElementById('modal-oc').value = oc;
+            document.getElementById('modal-sku').value = sku;
+            document.getElementById('modal-info').value = `${oc} | SKU: ${sku}`;
+            
+            const qtyInput = document.getElementById('modal-qty');
+            qtyInput.value = pending; // Por defecto sugiere todo lo pendiente
+            qtyInput.max = pending;
+            
+            document.getElementById('modal-max-help').innerText = `Saldo máximo pendiente: ${pending} unid.`;
+            document.getElementById('modal-node').value = '';
+            
+            modal.style.display = 'flex';
+        };
+
+        window.closeModal = () => { modal.style.display = 'none'; };
+
+        document.getElementById('btn-confirm-receive').addEventListener('click', async () => {
+            const oc = document.getElementById('modal-oc').value;
+            const sku = document.getElementById('modal-sku').value;
+            const qty = parseInt(document.getElementById('modal-qty').value, 10);
+            const node = document.getElementById('modal-node').value;
+            const maxQty = parseInt(document.getElementById('modal-qty').max, 10);
+
+            if (!qty || qty <= 0) return alert("Ingresa una cantidad válida.");
+            if (!node) return alert("Selecciona el depósito de consolidación.");
+            if (qty > maxQty) {
+                const conf = confirm(`Estás intentando ingresar ${qty} pero el saldo es de solo ${maxQty}. ¿Deseas forzar este ingreso por sobre-entrega de la fábrica?`);
+                if(!conf) return;
+            } else if (qty < maxQty) {
+                const conf = confirm(`Ingreso PARCIAL: Estás recibiendo ${qty} unidades. Quedarán ${maxQty - qty} como saldo pendiente. ¿Confirmar?`);
+                if(!conf) return;
+            }
+
+            const btn = document.getElementById('btn-confirm-receive');
+            const originalText = btn.innerText;
+            btn.innerText = '⏳ Impactando Stock...';
+            btn.disabled = true;
+
+            try {
+                const res = await fetch('/api/purchases_receive', {
+                    method: 'POST',
+                    body: JSON.stringify({ oc_number: oc, sku: sku, qty_received: qty, node_id: node }),
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const result = await res.json();
+
+                if (res.ok) {
+                    closeModal();
+                    loadPurchases(); // Recargar la tabla maestra
+                } else {
+                    alert(`❌ Error: ${result.error}`);
+                }
+            } catch (err) {
+                alert(`❌ Error de conexión.`);
+            } finally {
+                btn.innerText = originalText;
+                btn.disabled = false;
+            }
+        });
+
+        // Arrancar
+        window.onload = init;
+    </script>
+</body>
+</html>
