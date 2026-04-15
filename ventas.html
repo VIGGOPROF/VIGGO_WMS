@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Punto de Venta (POS) | VIGGO WMS</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script>if (!localStorage.getItem('viggo_auth_token')) window.location.href = 'login.html';</script>
+    <style>
+        .pos-grid { display: grid; grid-template-columns: 1fr 350px; gap: 20px; align-items: start; }
+        @media (max-width: 900px) { .pos-grid { grid-template-columns: 1fr; } }
+        .box { background: white; border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin-bottom: 20px; }
+        .box h3 { margin-top: 0; color: #0f172a; border-bottom: 2px solid #f1f5f9; padding-bottom: 10px; font-size: 1.1rem; }
+        
+        .client-info { background: #f8fafc; padding: 15px; border-radius: 6px; border: 1px solid #e2e8f0; margin-bottom: 20px; font-size: 0.9rem; }
+        .client-info span { display: block; margin-bottom: 5px; color: #475569; }
+        .client-info strong { color: #0f172a; }
+
+        .input-inline { display: flex; gap: 10px; margin-bottom: 15px; }
+        .input-inline input { padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; outline: none; }
+        
+        .cart-table th { background: #0f172a; color: white; padding: 10px; text-align: left; font-size: 0.85rem; }
+        .cart-table td { padding: 10px; border-bottom: 1px solid #e2e8f0; font-size: 0.9rem; vertical-align: middle; }
+        .btn-remove { background: #fee2e2; color: #ef4444; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        
+        .totals-box { background: #f1f5f9; padding: 20px; border-radius: 8px; text-align: right; }
+        .totals-box h2 { margin: 0; color: #10b981; font-size: 2.5rem; }
+        .btn-confirm { background: #10b981; color: white; width: 100%; border: none; padding: 15px; border-radius: 8px; font-size: 1.1rem; font-weight: bold; margin-top: 15px; cursor: pointer; transition: 0.2s; }
+        .btn-confirm:hover { background: #059669; }
+        .btn-confirm:disabled { background: #94a3b8; cursor: not-allowed; }
+    </style>
+</head>
+<body>
+
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="brand-logo">V</div>
+            <div class="brand-text"><strong id="user-display-name">Usuario</strong><small id="user-display-role">Logística</small></div>
+        </div>
+        <nav class="nav">
+            <a href="dashboard.html"><span class="nav-icon">📊</span> Dashboard</a>
+            <a href="compras.html"><span class="nav-icon">🏭</span> Compras (Fábrica)</a>
+            <a href="catalogo.html"><span class="nav-icon">📖</span> Catálogo</a>
+            <a href="index.html"><span class="nav-icon">📦</span> Ingreso (Manual)</a>
+            <a href="distribucion.html"><span class="nav-icon">🚛</span> Distribución</a>
+            <a href="transito.html"><span class="nav-icon">🚢</span> En Tránsito</a>
+            <a href="recepcion.html"><span class="nav-icon">📥</span> Recepción Destino</a>
+            <a href="precios.html"><span class="nav-icon">💰</span> Precios</a>
+            
+            <div style="margin: 15px 0 5px 15px; font-size: 0.75rem; color: #94a3b8; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">Comercial</div>
+            <a href="clientes.html"><span class="nav-icon">👥</span> Clientes</a>
+            <a href="ventas.html" class="active"><span class="nav-icon">🛒</span> Ventas (POS)</a>
+            
+            <div style="margin: 15px 0 5px 15px; font-size: 0.75rem; color: #94a3b8; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">Reportes</div>
+            <a href="documentos.html"><span class="nav-icon">📄</span> Documentos</a>
+            <a href="informes.html"><span class="nav-icon">📈</span> Informes</a>
+        </nav>
+    </aside>
+
+    <main class="main-content">
+        <div class="module-container">
+            <header style="margin-bottom: 25px;">
+                <h2>Punto de Venta B2B</h2>
+                <p style="color: #64748b; margin-top: 5px;">Genera remitos, calcula precios automáticos y descuenta stock.</p>
+            </header>
+
+            <div class="pos-grid">
+                
+                <div>
+                    <div class="box">
+                        <h3>1. Seleccionar Cliente</h3>
+                        <select id="pos-client-select" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 1rem; margin-bottom: 10px;">
+                            <option value="">Cargando clientes...</option>
+                        </select>
+                        <div id="client-card" class="client-info" style="display: none;">
+                            <span id="cc-name"><strong>Razón Social:</strong> -</span>
+                            <span id="cc-tax"><strong>CUIT/RUT:</strong> -</span>
+                            <span id="cc-node" style="color: #0369a1; font-weight: bold;">📍 Lista de Precios Activa: -</span>
+                        </div>
+                    </div>
+
+                    <div class="box" id="carga-box" style="opacity: 0.5; pointer-events: none;">
+                        <h3>2. Agregar Artículos</h3>
+                        
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                            <div style="border-right: 1px solid #e2e8f0; padding-right: 20px;">
+                                <label style="font-size:0.8rem; font-weight:bold; color:#475569;">Carga Rápida (SKU)</label>
+                                <div class="input-inline" style="margin-top: 5px;">
+                                    <input type="text" id="pos-sku" placeholder="Ej: VIG-01" style="width: 60%; text-transform: uppercase;">
+                                    <input type="number" id="pos-qty" placeholder="Cant." value="1" min="1" style="width: 40%;">
+                                </div>
+                                <button id="btn-add-item" style="background:#0f172a; color:white; border:none; padding:8px 15px; border-radius:6px; cursor:pointer; width:100%; font-weight:bold;">➕ Agregar al Remito</button>
+                            </div>
+                            
+                            <div>
+                                <label style="font-size:0.8rem; font-weight:bold; color:#475569;">Importar Lista (Excel)</label>
+                                <p style="font-size: 0.75rem; color: #64748b; margin: 5px 0;">Columnas requeridas: <b>SKU</b> y <b>Cantidad</b></p>
+                                <input type="file" id="pos-excel" accept=".xlsx, .xls, .csv" style="width: 100%; padding: 5px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.8rem; margin-bottom: 10px;">
+                                <button id="btn-upload-excel" style="background:#0369a1; color:white; border:none; padding:8px 15px; border-radius:6px; cursor:pointer; width:100%; font-weight:bold;">📤 Cargar Archivo</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="box">
+                        <h3>Detalle del Remito</h3>
+                        <table class="cart-table" style="width: 100%; border-collapse: collapse;">
+                            <thead>
+                                <tr>
+                                    <th>SKU</th>
+                                    <th>Descripción</th>
+                                    <th style="text-align:center;">Cant.</th>
+                                    <th style="text-align:right;">P. Unit</th>
+                                    <th style="text-align:right;">Subtotal</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="cart-tbody">
+                                <tr><td colspan="6" style="text-align: center; padding: 20px; color:#94a3b8;">El carrito está vacío</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="box totals-box">
+                    <span style="font-weight: bold; color: #64748b; text-transform: uppercase; letter-spacing: 1px;">Total a Facturar (USD)</span>
+                    <h2 id="cart-total">$ 0.00</h2>
+                    
+                    <button id="btn-confirm-sale" class="btn-confirm" disabled>Confirmar Venta</button>
+                    <div id="sale-status" style="margin-top: 15px; font-size: 0.85rem; font-weight: bold; text-align: center;"></div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <script>
+        let clientsList = [];
+        let currentClient = null;
+        let priceList = new Map(); // Mapa de precios para el país seleccionado
+        let cart = []; // {sku, name, qty, price, subtotal}
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const savedName = localStorage.getItem('viggo_user_name');
+            if (savedName) document.getElementById('user-display-name').innerText = `Usuario: ${savedName}`;
+            loadClients();
+        });
+
+        const getUserIdLocal = () => {
+            const token = localStorage.getItem('viggo_auth_token');
+            if (!token) return null;
+            try { return JSON.parse(atob(token)).id; } catch (e) { return null; }
+        };
+
+        // 1. Cargar Clientes
+        const loadClients = async () => {
+            const select = document.getElementById('pos-client-select');
+            try {
+                const res = await fetch('/api/clients');
+                const result = await res.json();
+                if (res.ok && result.data) {
+                    clientsList = result.data;
+                    select.innerHTML = '<option value="">Seleccione un cliente para facturar...</option>';
+                    clientsList.forEach(c => {
+                        select.innerHTML += `<option value="${c.id}">${c.business_name} (Sede: ${c.node_name})</option>`;
+                    });
+                }
+            } catch (error) { console.error("Error", error); }
+        };
+
+        // 2. Al seleccionar cliente, cargar su lista de precios
+        document.getElementById('pos-client-select').addEventListener('change', async (e) => {
+            const clientId = e.target.value;
+            const card = document.getElementById('client-card');
+            const cargaBox = document.getElementById('carga-box');
+            
+            if (!clientId) {
+                card.style.display = 'none';
+                cargaBox.style.opacity = '0.5';
+                cargaBox.style.pointerEvents = 'none';
+                currentClient = null;
+                return;
+            }
+
+            currentClient = clientsList.find(c => c.id.toString() === clientId);
+            document.getElementById('cc-name').innerHTML = `<strong>Razón Social:</strong> ${currentClient.business_name}`;
+            document.getElementById('cc-tax').innerHTML = `<strong>Identificación:</strong> ${currentClient.tax_id}`;
+            document.getElementById('cc-node').innerHTML = `📍 Lista de Precios Activa: ${currentClient.node_name}`;
+            card.style.display = 'block';
+
+            // Descargar lista de precios del nodo a la memoria
+            document.getElementById('cc-node').innerHTML += ` ⏳ Cargando...`;
+            try {
+                const res = await fetch(`/api/prices?node=${currentClient.node_id}`);
+                const result = await res.json();
+                if (res.ok && result.data) {
+                    priceList.clear();
+                    result.data.forEach(p => {
+                        priceList.set(p.sku.toUpperCase(), { name: p.name, price: p.price });
+                    });
+                    document.getElementById('cc-node').innerHTML = `📍 Lista de Precios Activa: ${currentClient.node_name} ✅`;
+                    cargaBox.style.opacity = '1';
+                    cargaBox.style.pointerEvents = 'auto';
+                }
+            } catch (err) {
+                alert("Error al cargar la lista de precios.");
+            }
+        });
+
+        // 3. Lógica del Carrito
+        const updateCartUI = () => {
+            const tbody = document.getElementById('cart-tbody');
+            const totalEl = document.getElementById('cart-total');
+            const btn = document.getElementById('btn-confirm-sale');
+
+            if (cart.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px; color:#94a3b8;">El carrito está vacío</td></tr>';
+                totalEl.innerText = '$ 0.00';
+                btn.disabled = true;
+                return;
+            }
+
+            let html = '';
+            let grandTotal = 0;
+
+            cart.forEach((item, index) => {
+                grandTotal += item.subtotal;
+                const priceColor = item.price === 0 ? 'color: red;' : '';
+                html += `
+                    <tr>
+                        <td><strong>${item.sku}</strong></td>
+                        <td>${item.name}</td>
+                        <td style="text-align:center; font-weight:bold;">${item.qty}</td>
+                        <td style="text-align:right; ${priceColor}">$${item.price.toFixed(2)}</td>
+                        <td style="text-align:right; font-weight:bold;">$${item.subtotal.toFixed(2)}</td>
+                        <td style="text-align:center;"><button class="btn-remove" onclick="removeFromCart(${index})">X</button></td>
+                    </tr>
+                `;
+            });
+
+            tbody.innerHTML = html;
+            totalEl.innerText = `$ ${grandTotal.toFixed(2)}`;
+            btn.disabled = false;
+        };
+
+        window.removeFromCart = (index) => {
+            cart.splice(index, 1);
+            updateCartUI();
+        };
+
+        const addItemToCart = (skuRaw, qtyRaw) => {
+            const sku = skuRaw.trim().toUpperCase();
+            const qty = parseInt(qtyRaw, 10);
+            
+            if (!sku || isNaN(qty) || qty <= 0) return;
+
+            const productData = priceList.get(sku);
+            if (!productData) {
+                alert(`El SKU "${sku}" no existe o no tiene precio en la Sede ${currentClient.node_name}.`);
+                return;
+            }
+
+            // Verificar si ya está en el carrito para sumar
+            const existingIndex = cart.findIndex(i => i.sku === sku);
+            if (existingIndex >= 0) {
+                cart[existingIndex].qty += qty;
+                cart[existingIndex].subtotal = cart[existingIndex].qty * cart[existingIndex].price;
+            } else {
+                cart.push({
+                    sku: sku,
+                    name: productData.name,
+                    qty: qty,
+                    price: productData.price,
+                    subtotal: qty * productData.price
+                });
+            }
+        };
+
+        // Carga Manual
+        document.getElementById('btn-add-item').addEventListener('click', () => {
+            const skuInput = document.getElementById('pos-sku');
+            const qtyInput = document.getElementById('pos-qty');
+            addItemToCart(skuInput.value, qtyInput.value);
+            skuInput.value = '';
+            qtyInput.value = '1';
+            skuInput.focus();
+            updateCartUI();
+        });
+
+        // Carga Excel
+        document.getElementById('btn-upload-excel').addEventListener('click', () => {
+            const fileInput = document.getElementById('pos-excel');
+            if (!fileInput.files.length) return alert('Selecciona un archivo Excel.');
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const json = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+                
+                json.forEach(row => {
+                    let sku = '', qty = 0;
+                    for (const key in row) {
+                        if (key.trim().toLowerCase() === 'sku') sku = row[key];
+                        if (key.trim().toLowerCase() === 'cantidad') qty = row[key];
+                    }
+                    if (sku && qty) addItemToCart(sku, qty);
+                });
+                
+                fileInput.value = '';
+                updateCartUI();
+            };
+            reader.readAsArrayBuffer(fileInput.files[0]);
+        });
+
+        // 4. Confirmar Venta
+        document.getElementById('btn-confirm-sale').addEventListener('click', async () => {
+            const btn = document.getElementById('btn-confirm-sale');
+            const status = document.getElementById('sale-status');
+            
+            if (cart.length === 0 || !currentClient) return;
+
+            btn.disabled = true;
+            btn.innerText = '⏳ Impactando Stock y Facturando...';
+
+            const payload = {
+                clientId: currentClient.id,
+                items: cart.map(i => ({ sku: i.sku, qty: i.qty })), // API toma precio de la BD
+                userId: getUserIdLocal()
+            };
+
+            try {
+                const res = await fetch('/api/sales', {
+                    method: 'POST',
+                    body: JSON.stringify(payload),
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                const result = await res.json();
+                
+                if (res.ok) {
+                    status.innerHTML = `<span style="color: green;">✅ ${result.message}</span>`;
+                    
+                    // Generar PDF del Remito
+                    generateRemitoPDF(currentClient, result.docRef, result.items, result.total);
+                    
+                    // Limpiar Venta
+                    cart = [];
+                    updateCartUI();
+                    document.getElementById('pos-client-select').value = '';
+                    document.getElementById('pos-client-select').dispatchEvent(new Event('change'));
+                } else {
+                    status.innerHTML = `<span style="color: red;">❌ ${result.error}</span>`;
+                }
+            } catch (err) {
+                status.innerHTML = `<span style="color: red;">❌ Error de conexión.</span>`;
+            } finally {
+                btn.innerText = 'Confirmar Venta';
+                setTimeout(() => { status.innerHTML = ''; }, 5000);
+            }
+        });
+
+        // 5. Generador de PDF
+        const generateRemitoPDF = (client, docRef, items, total) => {
+            const printWindow = window.open('', '_blank');
+            const date = new Date().toLocaleDateString('es-ES');
+            
+            let itemsHtml = '';
+            items.forEach(item => {
+                itemsHtml += `
+                    <tr>
+                        <td style="padding:8px; border-bottom:1px solid #eee;">${item.sku}</td>
+                        <td style="padding:8px; border-bottom:1px solid #eee;">${item.name}</td>
+                        <td style="padding:8px; border-bottom:1px solid #eee; text-align:center;">${item.qty}</td>
+                        <td style="padding:8px; border-bottom:1px solid #eee; text-align:right;">$${item.price.toFixed(2)}</td>
+                        <td style="padding:8px; border-bottom:1px solid #eee; text-align:right; font-weight:bold;">$${item.subtotal.toFixed(2)}</td>
+                    </tr>`;
+            });
+
+            printWindow.document.write(`
+                <html>
+                <head>
+                    <title>Remito ${docRef}</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; padding: 40px; color: #333; }
+                        .header { border-bottom: 2px solid #0f172a; padding-bottom: 20px; margin-bottom: 30px; display:flex; justify-content: space-between;}
+                        .info-box { background: #f8fafc; padding: 15px; border-radius: 6px; margin-bottom: 30px; border: 1px solid #e2e8f0; }
+                        table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+                        th { background: #0f172a; color: white; padding: 10px; text-align: left; font-size: 14px; }
+                    </style>
+                </head>
+                <body>
+                    <div class="header">
+                        <div><h1 style="margin:0; color:#0f172a;">REMITO COMERCIAL</h1><p style="margin:5px 0 0 0; color:#64748b;">VIGGO WMS</p></div>
+                        <div style="text-align:right;"><h2 style="margin:0; color:#0369a1;">${docRef}</h2><p style="margin:5px 0 0 0;">Fecha: ${date}</p></div>
+                    </div>
+                    <div class="info-box">
+                        <table style="margin:0; border:none;">
+                            <tr>
+                                <td><strong>Cliente:</strong> ${client.business_name}</td>
+                                <td><strong>CUIT/RUT:</strong> ${client.tax_id}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>País de Operación:</strong> ${client.node_name}</td>
+                                <td><strong>Entrega:</strong> ${client.shipping_address || 'A convenir'}</td>
+                            </tr>
+                        </table>
+                    </div>
+                    <table>
+                        <thead><tr><th>SKU</th><th>Descripción</th><th style="text-align:center;">Cant.</th><th style="text-align:right;">P. Unit</th><th style="text-align:right;">Subtotal</th></tr></thead>
+                        <tbody>${itemsHtml}</tbody>
+                        <tfoot>
+                            <tr><th colspan="4" style="text-align:right; font-size:18px;">TOTAL USD:</th><th style="text-align:right; font-size:18px;">$${total.toFixed(2)}</th></tr>
+                        </tfoot>
+                    </table>
+                </body>
+                </html>
+            `);
+            printWindow.document.close();
+            setTimeout(() => { printWindow.print(); }, 500);
+        };
+    </script>
+</body>
+</html>
