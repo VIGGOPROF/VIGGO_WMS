@@ -25,10 +25,11 @@
                 <p style="color: #64748b; margin: 0;">Vista matricial del stock físico y en tránsito. Las celdas amarillas indican mercadería en camino.</p>
             </header>
 
-            <div class="action-bar" style="display: flex; justify-content: space-between; margin-bottom: 20px; align-items: center; background: white; padding: 15px; border-radius: 8px; border: 1px solid var(--border);">
-                <div class="search-box" style="display: flex; align-items: center;">
-                    <span class="search-icon" style="margin-right: 10px;">🔍</span>
-                    <input type="text" id="dashboard-search" placeholder="Filtrar por SKU o nombre..." style="padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; width: 250px;">
+            <div class="action-bar" style="display: flex; justify-content: space-between; margin-bottom: 20px; align-items: center; background: white; padding: 15px; border-radius: 8px; border: 1px solid var(--border); flex-wrap: wrap; gap: 15px;">
+                
+                <div style="position: relative;">
+                    <span style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 0.9rem;">🔍</span>
+                    <input type="text" id="dashboard-search" placeholder="Filtrar por SKU o nombre..." style="padding: 8px 8px 8px 35px; border: 1px solid #cbd5e1; border-radius: 6px; width: 280px; box-sizing: border-box; outline: none;">
                 </div>
                 
                 <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
@@ -50,23 +51,12 @@
                 </div>
             </div>
             
-            <div id="dashboard-container" style="background: white; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; padding: 20px; min-height: 200px;">
-                <p style="text-align: center; color: #64748b;">⏳ Cargando matriz de stock...</p>
+            <div id="dashboard-container" style="background: white; border: 1px solid var(--border); border-radius: 8px; overflow: auto; max-height: 650px;">
+                <p style="text-align: center; color: #64748b; padding: 20px;">⏳ Cargando matriz de stock...</p>
             </div>
 
         </div>
     </main>
-
-    <script>
-        // --- MOTOR DE ARRANQUE LIMPIO ---
-        document.addEventListener("DOMContentLoaded", () => {
-            // NOTA: Si la función que dibuja tu dashboard está en este archivo, ponla aquí.
-            // Ejemplo: loadDashboardMatrix();
-            
-            // Si la lógica está dentro de tu archivo script.js global, 
-            // no necesitas agregar nada más aquí.
-        });
-    </script>
 
     <script src="script.js"></script>
 </body>
