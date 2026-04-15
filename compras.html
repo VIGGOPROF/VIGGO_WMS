@@ -55,6 +55,14 @@
         .btn-cancel { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 8px 15px; border-radius: 6px; cursor: pointer; }
         .btn-confirm { background: #10b981; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; }
     </style>
+
+    <script>
+    // Candado de Seguridad VIGGO
+    if (!localStorage.getItem('viggo_auth_token')) {
+        window.location.href = 'login.html';
+    }
+</script>
+    
 </head>
 <body>
 
