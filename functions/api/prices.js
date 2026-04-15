@@ -10,7 +10,7 @@ export async function onRequestGet(context) {
       return new Response(JSON.stringify({ error: "Debe especificar un país válido." }), { status: 400 });
     }
 
-    // NUEVO: Ahora también trae el STOCK (i.quantity) del depósito seleccionado
+    // El filtro WHERE bloquea los eliminados antes de que viajen a la pantalla
     const query = `
       SELECT 
         p.id as product_id,
@@ -21,6 +21,7 @@ export async function onRequestGet(context) {
       FROM products p
       LEFT JOIN prices pr ON p.id = pr.product_id AND pr.node_id = ?
       LEFT JOIN inventory i ON p.id = i.product_id AND i.node_id = ?
+      WHERE p.name NOT LIKE 'Z_ELIMINADO%'
       ORDER BY p.sku ASC
     `;
 
@@ -50,6 +51,7 @@ export async function onRequestPost(context) {
     for (const item of payload.prices) {
       let productId = parseInt(item.productId, 10);
 
+      // Si nos pasan el SKU en lugar del ID numérico, lo buscamos
       if (isNaN(productId) && item.sku) {
         const prod = await db.prepare('SELECT id FROM products WHERE sku = ?').bind(item.sku.trim()).first();
         if (!prod) {
@@ -70,6 +72,7 @@ export async function onRequestPost(context) {
       }
     }
 
+    // Registro de Auditoría
     if (userId && statements.length > 0) {
        const desc = `Actualizó lista de precios para el nodo ${nodeId} (${payload.prices.length} productos)`;
        statements.push(
