@@ -11,46 +11,43 @@
     if (!localStorage.getItem('viggo_auth_token')) {
         window.location.href = 'login.html';
     }
-</script>
+    </script>
     
 </head>
 <body>
 
-  <div id="sidebar-container"></div>
+    <div id="sidebar-container"></div>
 
     <main class="main-content">
         <div class="module-container">
-            <header>
+            <header style="margin-bottom: 25px;">
                 <h2>Radar de Mercadería en Tránsito</h2>
-                <p>Monitorea todos los contenedores y despachos activos que aún no han llegado a destino.</p>
+                <p style="color: #64748b; margin-top: 5px;">Monitorea todos los contenedores y despachos activos que aún no han llegado a destino.</p>
             </header>
 
-            <div class="action-bar" style="background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0;">
+            <div class="action-bar" style="background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 20px;">
                 <div style="display: flex; gap: 15px; flex-wrap: wrap; align-items: center; width: 100%;">
                     
                     <div style="display: flex; align-items: center; gap: 10px;">
-                        <label style="margin: 0;">🛫 Origen:</label>
-                        <select id="filter-origin" style="width: 200px;">
+                        <label style="margin: 0; font-weight: bold; color: #475569; font-size: 0.85rem;">🛫 Origen:</label>
+                        <select id="filter-origin" style="width: 200px; padding: 8px; border-radius: 6px; border: 1px solid #cbd5e1;">
                             <option value="ALL">Todos los orígenes</option>
-                            <option value="China Central">China Central</option>
-                            <option value="Argentina HQ">Argentina HQ</option>
-                            <option value="Paraguay Dist.">Paraguay Dist.</option>
-                            <option value="Chile Filial">Chile Filial</option>
-                        </select>
+                            </select>
                     </div>
 
                     <div style="display: flex; align-items: center; gap: 10px;">
-                        <label style="margin: 0;">🛬 Destino:</label>
-                        <select id="filter-dest" style="width: 200px;">
+                        <label style="margin: 0; font-weight: bold; color: #475569; font-size: 0.85rem;">🛬 Destino:</label>
+                        <select id="filter-dest" style="width: 200px; padding: 8px; border-radius: 6px; border: 1px solid #cbd5e1;">
                             <option value="ALL">Todos los destinos</option>
-                            <option value="China Central">China Central</option>
-                            <option value="Argentina HQ">Argentina HQ</option>
-                            <option value="Paraguay Dist.">Paraguay Dist.</option>
-                            <option value="Chile Filial">Chile Filial</option>
-                        </select>
+                            </select>
+                    </div>
+                    
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <label style="margin: 0; font-weight: bold; color: #475569; font-size: 0.85rem;">🔍 Buscar:</label>
+                        <input type="text" id="search-transit" placeholder="Contenedor o SKU..." style="padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; width: 200px; outline: none;">
                     </div>
 
-                    <button id="refresh-transits" style="margin-left: auto;">
+                    <button id="refresh-transits" style="margin-left: auto; background: #0f172a; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; display: flex; align-items: center;">
                         <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="margin-right: 5px;">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
                         </svg>
@@ -59,12 +56,37 @@
                 </div>
             </div>
 
-            <div id="active-transits-container" style="overflow-x: auto; margin-top: 20px;">
-                <p>⏳ Buscando contenedores en tránsito...</p>
+            <div id="active-transits-container" style="overflow-x: auto; background: white; border: 1px solid var(--border); border-radius: 8px; min-height: 200px;">
+                <p style="text-align: center; color: #64748b; padding: 20px;">⏳ Buscando contenedores en tránsito...</p>
             </div>
             
         </div>
     </main>
+
+    <script>
+        // --- MOTOR DE ARRANQUE PARA CARGAR FILTROS ---
+        document.addEventListener("DOMContentLoaded", async () => {
+            const originSelect = document.getElementById('filter-origin');
+            const destSelect = document.getElementById('filter-dest');
+            
+            try {
+                const res = await fetch('/api/nodes');
+                const result = await res.json();
+                
+                if (res.ok && result.data) {
+                    let options = '';
+                    result.data.forEach(n => {
+                        options += `<option value="${n.name}">${n.name}</option>`;
+                    });
+                    
+                    originSelect.innerHTML += options;
+                    destSelect.innerHTML += options;
+                }
+            } catch (e) {
+                console.error("Error cargando depósitos para los filtros.");
+            }
+        });
+    </script>
 
     <script src="script.js"></script>
 </body>
