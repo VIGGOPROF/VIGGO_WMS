@@ -5,17 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Directorio de Clientes | VIGGO WMS</title>
     <link rel="stylesheet" href="style.css">
-    <script>
-        // Candado de Seguridad
-        if (!localStorage.getItem('viggo_auth_token')) window.location.href = 'login.html';
-    </script>
+    <script>if (!localStorage.getItem('viggo_auth_token')) window.location.href = 'login.html';</script>
+    <style>
+        .input-group { margin-bottom: 12px; }
+        .input-group label { display: block; font-size: 0.8rem; font-weight: bold; color: #475569; margin-bottom: 4px; text-transform: uppercase;}
+        .input-group input, .input-group select, .input-group textarea { width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; font-family: inherit;}
+        .btn-edit { background: none; border: none; cursor: pointer; font-size: 1.2rem; }
+        .btn-cancel { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 10px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 10px; display: none;}
+    </style>
 </head>
 <body>
 
     <aside class="sidebar">
         <div class="brand">
             <div class="brand-logo">V</div>
-            <div class="brand-text"><strong>Usuario: Cargando...</strong><small>Control Logístico</small></div>
+            <div class="brand-text"><strong id="user-display-name">Usuario</strong><small id="user-display-role">Logística</small></div>
         </div>
         <nav class="nav">
             <a href="dashboard.html"><span class="nav-icon">📊</span> Dashboard</a>
@@ -40,67 +44,79 @@
     <main class="main-content">
         <div class="module-container">
             <header style="margin-bottom: 25px;">
-                <h2>Gestión de Distribuidores y Clientes</h2>
-                <p style="color: #64748b; margin-top: 5px;">Alta de clientes, asignación por país y estado de cuenta corriente.</p>
+                <h2>Gestión de Distribuidores B2B</h2>
+                <p style="color: #64748b; margin-top: 5px;">Directorio de clientes, asignación de precios por país e historial de saldos.</p>
             </header>
 
-            <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 20px;">
+            <div style="display: grid; grid-template-columns: 350px 1fr; gap: 20px;">
                 
-                <div style="background: white; border: 1px solid var(--border); border-radius: 8px; padding: 20px;">
-                    <h3 style="margin-top: 0; color: #0f172a; border-bottom: 2px solid #f1f5f9; padding-bottom: 10px;">Nuevo Cliente</h3>
+                <div style="background: white; border: 1px solid var(--border); border-radius: 8px; padding: 20px; height: fit-content;">
+                    <h3 id="form-title" style="margin-top: 0; color: #0f172a; border-bottom: 2px solid #f1f5f9; padding-bottom: 10px;">Nuevo Cliente</h3>
                     
                     <form id="client-form">
-                        <div style="margin-bottom: 12px;">
-                            <label style="font-size: 0.8rem; font-weight: bold; color: #475569;">País / Sede Asignada *</label>
-                            <select id="client-node" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px;" required></select>
+                        <input type="hidden" id="client-id"> <div class="input-group">
+                            <label>Sede Operativa (País) *</label>
+                            <select id="client-node" required></select>
+                            <small style="color:#10b981; font-size: 0.7rem; font-weight:bold;">ℹ️ Aplica lista de precios de esta sede.</small>
                         </div>
-                        <div style="margin-bottom: 12px;">
-                            <label style="font-size: 0.8rem; font-weight: bold; color: #475569;">Razón Social / Nombre *</label>
-                            <input type="text" id="client-name" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;" required>
+                        <div class="input-group">
+                            <label>Razón Social / Nombre *</label>
+                            <input type="text" id="client-name" required>
                         </div>
-                        <div style="margin-bottom: 12px;">
-                            <label style="font-size: 0.8rem; font-weight: bold; color: #475569;">Identificador Fiscal (CUIT/RUT) *</label>
-                            <input type="text" id="client-tax" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;" required>
-                        </div>
-                        <div style="margin-bottom: 12px;">
-                            <label style="font-size: 0.8rem; font-weight: bold; color: #475569;">Email</label>
-                            <input type="email" id="client-email" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;">
-                        </div>
-                        <div style="margin-bottom: 12px;">
-                            <label style="font-size: 0.8rem; font-weight: bold; color: #475569;">Teléfono</label>
-                            <input type="text" id="client-phone" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;">
-                        </div>
-                        <div style="margin-bottom: 20px;">
-                            <label style="font-size: 0.8rem; font-weight: bold; color: #475569;">Dirección Física</label>
-                            <input type="text" id="client-address" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;">
+                        <div class="input-group">
+                            <label>Identificador Fiscal (CUIT/RUT) *</label>
+                            <input type="text" id="client-tax" required>
                         </div>
                         
-                        <button type="submit" id="btn-save-client" style="background: var(--primary); color: white; border: none; padding: 10px; width: 100%; border-radius: 6px; cursor: pointer; font-weight: bold;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                            <div class="input-group"><label>Email</label><input type="email" id="client-email"></div>
+                            <div class="input-group"><label>Teléfono</label><input type="text" id="client-phone"></div>
+                        </div>
+
+                        <div class="input-group">
+                            <label>Dirección de Facturación</label>
+                            <input type="text" id="client-address" placeholder="Calle, Número, Ciudad">
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 2fr 1fr; gap:10px;">
+                            <div class="input-group"><label>Dirección de Envío</label><input type="text" id="client-shipping" placeholder="Depósito de entrega"></div>
+                            <div class="input-group"><label>Cod. Postal</label><input type="text" id="client-zip"></div>
+                        </div>
+
+                        <div class="input-group">
+                            <label>Observaciones / Notas Logísticas</label>
+                            <textarea id="client-obs" rows="2" placeholder="Ej: Entregar por portón 2 de 8hs a 12hs..."></textarea>
+                        </div>
+                        
+                        <button type="submit" id="btn-save-client" style="background: #0f172a; color: white; border: none; padding: 12px; width: 100%; border-radius: 6px; cursor: pointer; font-weight: bold;">
                             💾 Guardar Cliente
                         </button>
+                        <button type="button" id="btn-cancel-edit" class="btn-cancel">Cancelar Edición</button>
+                        
                         <div id="client-status" style="margin-top: 10px; font-size: 0.85rem; font-weight: bold; text-align: center;"></div>
                     </form>
                 </div>
 
                 <div style="background: white; border: 1px solid var(--border); border-radius: 8px; overflow: hidden;">
                     <div style="padding: 15px; background: #f8fafc; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
-                        <h3 style="margin: 0; color: #0f172a; font-size: 1rem;">Directorio</h3>
-                        <input type="text" id="search-client" placeholder="🔍 Buscar por nombre o CUIT..." style="padding: 6px 12px; border: 1px solid #cbd5e1; border-radius: 6px; width: 200px;">
+                        <h3 style="margin: 0; color: #0f172a; font-size: 1rem;">Directorio Activo</h3>
+                        <input type="text" id="search-client" placeholder="🔍 Buscar por nombre o CUIT..." style="padding: 6px 12px; border: 1px solid #cbd5e1; border-radius: 6px; width: 250px;">
                     </div>
                     
-                    <div style="overflow-x: auto;">
+                    <div style="overflow-x: auto; max-height: 700px;">
                         <table class="excel-table" style="width: 100%; border-collapse: collapse;">
                             <thead>
                                 <tr>
                                     <th>Razón Social</th>
                                     <th>Identificación</th>
                                     <th>Sede (País)</th>
-                                    <th>Contacto</th>
+                                    <th>Contacto / Envío</th>
                                     <th style="text-align: right;">Saldo Cta. Cte.</th>
+                                    <th style="text-align: center;">Acción</th>
                                 </tr>
                             </thead>
                             <tbody id="clients-tbody">
-                                <tr><td colspan="5" style="text-align: center; padding: 20px;">Cargando clientes...</td></tr>
+                                <tr><td colspan="6" style="text-align: center; padding: 20px;">Cargando clientes...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -110,10 +126,16 @@
         </div>
     </main>
 
-    <script src="script.js"></script>
     <script>
-        // Lógica exclusiva de la página de Clientes
         let allClients = [];
+
+        // Inicializar UI con usuario
+        document.addEventListener("DOMContentLoaded", () => {
+            const savedName = localStorage.getItem('viggo_user_name');
+            const savedRole = localStorage.getItem('viggo_user_role');
+            if (savedName) document.getElementById('user-display-name').innerText = `Usuario: ${savedName}`;
+            if (savedRole) document.getElementById('user-display-role').innerText = savedRole;
+        });
 
         const getUserIdLocal = () => {
             const token = localStorage.getItem('viggo_auth_token');
@@ -129,7 +151,11 @@
                 if (res.ok && result.data) {
                     select.innerHTML = '<option value="">Seleccione país...</option>';
                     result.data.forEach(n => {
-                        select.innerHTML += `<option value="${n.id}">${n.name}</option>`;
+                        // EXCLUIR CHINA Y FÁBRICA (Clientes B2B solo en destino)
+                        const nameLower = n.name.toLowerCase();
+                        if (!nameLower.includes('china') && !nameLower.includes('fabrica') && !nameLower.includes('fábrica')) {
+                            select.innerHTML += `<option value="${n.id}">${n.name}</option>`;
+                        }
                     });
                 }
             } catch (error) { console.error("Error cargando nodos"); }
@@ -145,10 +171,10 @@
                     allClients = result.data;
                     renderClientsTable();
                 } else {
-                    tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: red;">Error al cargar</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: red;">Error al cargar</td></tr>`;
                 }
             } catch (error) {
-                tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: red;">Error de red</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: red;">Error de red</td></tr>`;
             }
         };
 
@@ -162,25 +188,34 @@
             );
 
             if (filtered.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" style="text-align: center;">No hay clientes registrados.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center;">No hay clientes registrados.</td></tr>`;
                 return;
             }
 
             let html = '';
             filtered.forEach(c => {
-                // Formateo de moneda. Si es positivo es deuda (rojo/naranja), si es negativo es a favor (verde)
                 let balanceColor = c.current_balance > 0 ? '#ef4444' : (c.current_balance < 0 ? '#10b981' : '#64748b');
                 let balanceText = `$ ${Math.abs(c.current_balance).toLocaleString('en-US', {minimumFractionDigits: 2})}`;
                 if (c.current_balance > 0) balanceText = `Debe: ` + balanceText;
                 if (c.current_balance < 0) balanceText = `A favor: ` + balanceText;
                 
+                // Sanitizar para el botón editar
+                const cString = JSON.stringify(c).replace(/'/g, "\\'").replace(/"/g, '&quot;');
+
                 html += `
                     <tr>
                         <td><strong>${c.business_name}</strong></td>
                         <td>${c.tax_id}</td>
-                        <td><span style="background: #f1f5f9; padding: 3px 8px; border-radius: 4px; font-size: 0.8rem; border: 1px solid #e2e8f0;">📍 ${c.node_name}</span></td>
-                        <td style="font-size: 0.85rem;">${c.email || '-'}<br><span style="color:#64748b;">${c.phone || '-'}</span></td>
+                        <td><span style="background: #e0f2fe; padding: 3px 8px; border-radius: 4px; font-size: 0.8rem; border: 1px solid #bae6fd; font-weight:bold; color: #0369a1;">📍 ${c.node_name}</span></td>
+                        <td style="font-size: 0.8rem;">
+                            📧 ${c.email || '-'}<br>
+                            📞 <span style="color:#64748b;">${c.phone || '-'}</span><br>
+                            🚛 <span style="color:#64748b; font-style: italic;">${c.shipping_address || 'Sin direc. envío'}</span>
+                        </td>
                         <td style="text-align: right; font-weight: bold; color: ${balanceColor};">${balanceText}</td>
+                        <td style="text-align: center;">
+                            <button class="btn-edit" onclick="editClient(${cString})" title="Editar Cliente">✏️</button>
+                        </td>
                     </tr>
                 `;
             });
@@ -189,18 +224,54 @@
 
         document.getElementById('search-client').addEventListener('input', renderClientsTable);
 
+        // LÓGICA DE EDICIÓN
+        window.editClient = (client) => {
+            document.getElementById('form-title').innerText = 'Editar Cliente';
+            document.getElementById('client-id').value = client.id;
+            document.getElementById('client-node').value = client.node_id;
+            document.getElementById('client-name').value = client.business_name;
+            document.getElementById('client-tax').value = client.tax_id;
+            document.getElementById('client-email').value = client.email || '';
+            document.getElementById('client-phone').value = client.phone || '';
+            document.getElementById('client-address').value = client.address || '';
+            document.getElementById('client-shipping').value = client.shipping_address || '';
+            document.getElementById('client-zip').value = client.zip_code || '';
+            document.getElementById('client-obs').value = client.observations || '';
+            
+            document.getElementById('btn-save-client').innerText = '🔄 Actualizar Cliente';
+            document.getElementById('btn-save-client').style.background = '#10b981';
+            document.getElementById('btn-cancel-edit').style.display = 'block';
+            window.scrollTo(0, 0);
+        };
+
+        const resetForm = () => {
+            document.getElementById('client-form').reset();
+            document.getElementById('client-id').value = '';
+            document.getElementById('form-title').innerText = 'Nuevo Cliente';
+            document.getElementById('btn-save-client').innerText = '💾 Guardar Cliente';
+            document.getElementById('btn-save-client').style.background = '#0f172a';
+            document.getElementById('btn-cancel-edit').style.display = 'none';
+        };
+
+        document.getElementById('btn-cancel-edit').addEventListener('click', resetForm);
+
         document.getElementById('client-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = document.getElementById('btn-save-client');
             const status = document.getElementById('client-status');
+            const isEditing = document.getElementById('client-id').value !== '';
             
             const payload = {
+                id: document.getElementById('client-id').value,
                 node_id: document.getElementById('client-node').value,
                 business_name: document.getElementById('client-name').value,
                 tax_id: document.getElementById('client-tax').value,
                 email: document.getElementById('client-email').value,
                 phone: document.getElementById('client-phone').value,
                 address: document.getElementById('client-address').value,
+                shipping_address: document.getElementById('client-shipping').value,
+                zip_code: document.getElementById('client-zip').value,
+                observations: document.getElementById('client-obs').value,
                 userId: getUserIdLocal()
             };
 
@@ -209,7 +280,7 @@
             
             try {
                 const res = await fetch('/api/clients', {
-                    method: 'POST',
+                    method: isEditing ? 'PUT' : 'POST',
                     body: JSON.stringify(payload),
                     headers: { 'Content-Type': 'application/json' }
                 });
@@ -218,8 +289,8 @@
                 
                 if (res.ok) {
                     status.innerHTML = `<span style="color: green;">✅ ${result.message}</span>`;
-                    document.getElementById('client-form').reset();
-                    loadClients(); // Recargamos la tabla
+                    resetForm();
+                    loadClients();
                 } else {
                     status.innerHTML = `<span style="color: red;">❌ ${result.error}</span>`;
                 }
@@ -227,12 +298,11 @@
                 status.innerHTML = `<span style="color: red;">❌ Error de conexión.</span>`;
             } finally {
                 btn.disabled = false;
-                btn.innerText = '💾 Guardar Cliente';
+                if (!isEditing) btn.innerText = '💾 Guardar Cliente';
                 setTimeout(() => { status.innerHTML = ''; }, 4000);
             }
         });
 
-        // Inicializar
         window.onload = () => {
             loadNodesForClients();
             loadClients();
