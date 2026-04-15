@@ -12,7 +12,7 @@
     if (!localStorage.getItem('viggo_auth_token')) {
         window.location.href = 'login.html';
     }
-</script>
+    </script>
     
     <style>
         /* Filtro Superior */
@@ -46,7 +46,7 @@
 </head>
 <body>
 
-   <div id="sidebar-container"></div>
+    <div id="sidebar-container"></div>
 
     <main class="main-content">
         <div class="module-container">
@@ -140,6 +140,19 @@
         let nodeChartInstance = null;
         let categoryChartInstance = null; // Variable para el gráfico de categorías restaurada
         let currentMrpData = [];
+
+        // --- MOTOR DE ARRANQUE UNIFICADO ---
+        document.addEventListener("DOMContentLoaded", async () => {
+            await loadNodes();
+            loadReports();
+            
+            document.getElementById('global-node-filter').addEventListener('change', () => {
+                loadReports();
+                // Limpiar tabla MRP si cambian de región para evitar confusiones
+                document.getElementById('mrp-tbody').innerHTML = '<tr><td colspan="6" style="text-align: center; color: #64748b; padding: 20px;">Región modificada. Haz clic en "Calcular Sugerido" de nuevo.</td></tr>';
+                document.getElementById('btn-export-mrp').style.display = 'none';
+            });
+        });
 
         // Inicialización de Nodos
         const loadNodes = async () => {
@@ -327,16 +340,9 @@
             document.body.appendChild(link); link.click(); document.body.removeChild(link);
         });
 
-        window.onload = async () => {
-            await loadNodes();
-            loadReports();
-            document.getElementById('global-node-filter').addEventListener('change', () => {
-                loadReports();
-                // Limpiar tabla MRP si cambian de región para evitar confusiones
-                document.getElementById('mrp-tbody').innerHTML = '<tr><td colspan="6" style="text-align: center; color: #64748b; padding: 20px;">Región modificada. Haz clic en "Calcular Sugerido" de nuevo.</td></tr>';
-                document.getElementById('btn-export-mrp').style.display = 'none';
-            });
-        };
     </script>
+    
+    <script src="script.js"></script>
+
 </body>
 </html>
