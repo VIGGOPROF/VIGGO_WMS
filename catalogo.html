@@ -94,6 +94,13 @@
         .tab-btn { color: #64748b !important; background: transparent !important; }
         .tab-btn.active { color: #2563eb !important; border-bottom: 3px solid #2563eb !important; }
     </style>
+<script>
+    // Candado de Seguridad VIGGO
+    if (!localStorage.getItem('viggo_auth_token')) {
+        window.location.href = 'login.html';
+    }
+</script>
+    
 </head>
 <body>
 
