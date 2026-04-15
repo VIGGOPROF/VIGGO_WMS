@@ -110,11 +110,10 @@
     <script>
         let allClients = [];
 
+        // --- MOTOR DE ARRANQUE LIMPIO ---
         document.addEventListener("DOMContentLoaded", () => {
-            const savedName = localStorage.getItem('viggo_user_name');
-            const savedRole = localStorage.getItem('viggo_user_role');
-            if (savedName) document.getElementById('user-display-name').innerText = `Usuario: ${savedName}`;
-            if (savedRole) document.getElementById('user-display-role').innerText = savedRole;
+            loadNodesForClients();
+            loadClients();
         });
 
         const getUserIdLocal = () => {
@@ -207,7 +206,6 @@
 
         // NAVEGACIÓN A CUENTA CORRIENTE
         window.openCuentaCorriente = (clientId) => {
-            // Esto redirigirá a la página que crearemos en la Fase 3, pasando el ID del cliente
             window.location.href = `cuenta_corriente.html?client_id=${clientId}`;
         };
 
@@ -289,11 +287,8 @@
                 setTimeout(() => { status.innerHTML = ''; }, 4000);
             }
         });
-
-        window.onload = () => {
-            loadNodesForClients();
-            loadClients();
-        };
     </script>
+    
+    <script src="script.js"></script>
 </body>
 </html>
