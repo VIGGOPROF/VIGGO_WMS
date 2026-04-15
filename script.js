@@ -1,11 +1,41 @@
 // ====================================================================
+// UTILIDAD GENERAL: Obtener ID de Usuario para Auditoría
+// ====================================================================
+const getUserId = () => {
+    const token = localStorage.getItem('viggo_auth_token');
+    if (!token) return null;
+    try {
+        const payload = JSON.parse(atob(token));
+        return payload.id;
+    } catch (e) {
+        return null;
+    }
+};
+
+// ====================================================================
+// MOSTRAR USUARIO LOGUEADO EN EL SIDEBAR
+// ====================================================================
+document.addEventListener("DOMContentLoaded", () => {
+    const userNameElement = document.querySelector('.brand-text strong');
+    const userRoleElement = document.querySelector('.brand-text small');
+    const savedName = localStorage.getItem('viggo_user_name');
+    const savedRole = localStorage.getItem('viggo_user_role');
+    
+    if (userNameElement && savedName) {
+        userNameElement.innerText = `Usuario: ${savedName}`;
+    }
+    if (userRoleElement && savedRole) {
+        userRoleElement.innerText = savedRole;
+    }
+});
+
+// ====================================================================
 // MÓDULO 1: INGRESO HÍBRIDO (Manual + Excel)
 // ====================================================================
 const btnManual = document.getElementById('btn-submit-manual');
 const btnExcel = document.getElementById('btn-submit-excel');
 const inboundStatus = document.getElementById('inbound-status');
 
-// Función centralizada para enviar al backend
 async function sendInboundData(nodeId, itemsArray, btnElement) {
     btnElement.disabled = true;
     const originalText = btnElement.innerText;
@@ -15,14 +45,14 @@ async function sendInboundData(nodeId, itemsArray, btnElement) {
     try {
         const res = await fetch('/api/inbound', {
             method: 'POST',
-            body: JSON.stringify({ nodeId: nodeId, items: itemsArray }),
+            body: JSON.stringify({ nodeId: nodeId, items: itemsArray, userId: getUserId() }),
             headers: { 'Content-Type': 'application/json' }
         });
         const result = await res.json();
 
         if (res.ok) {
             inboundStatus.innerHTML = `✅ <span style="color:green;">${result.message}</span>`;
-            return true; // Éxito
+            return true;
         } else {
             inboundStatus.innerHTML = `❌ <span style="color:red;">Error: ${result.error}</span>`;
             return false;
@@ -36,7 +66,6 @@ async function sendInboundData(nodeId, itemsArray, btnElement) {
     }
 }
 
-// Evento: Carga Manual
 if (btnManual) {
     btnManual.addEventListener('click', async () => {
         const nodeId = document.getElementById('inbound-node').value;
@@ -52,17 +81,14 @@ if (btnManual) {
         }
 
         const items = [{ sku: sku, name: name, category: cat, factory: fab, qty: qty }];
-        
         const success = await sendInboundData(nodeId, items, btnManual);
         if (success) {
-            // Limpiar formulario si fue exitoso
             document.getElementById('man-sku').value = '';
             document.getElementById('man-qty').value = '';
         }
     });
 }
 
-// Evento: Carga Excel
 if (btnExcel) {
     btnExcel.addEventListener('click', async () => {
         const nodeId = document.getElementById('inbound-node').value;
@@ -87,7 +113,6 @@ if (btnExcel) {
 
             const success = await sendInboundData(nodeId, jsonData, btnExcel);
             if (success) {
-                // Resetear el visual de subida
                 document.getElementById('drop-zone').style.display = 'block';
                 document.getElementById('file-info').style.display = 'none';
                 fileInput.value = '';
@@ -107,7 +132,7 @@ if (dispatchBtn) {
         const origen = document.getElementById('origen-select').value;
         const destino = document.getElementById('destino-select').value;
         const transporte = document.getElementById('transporte-select').value;
-        const containerNumber = document.getElementById('container-input')?.value || ''; // Capturamos contenedor
+        const containerNumber = document.getElementById('container-input')?.value || '';
         const fileInput = document.getElementById('dist-excel-file');
         const statusBox = document.getElementById('transfer-status');
 
@@ -117,7 +142,7 @@ if (dispatchBtn) {
         }
 
         if (!fileInput.files.length) {
-            statusBox.innerHTML = '⚠️ <span style="color:red;">Por favor, sube el Excel (Packing List) primero.</span>';
+            statusBox.innerHTML = '⚠️ <span style="color:red;">Por favor, sube el Excel primero.</span>';
             return;
         }
 
@@ -140,7 +165,14 @@ if (dispatchBtn) {
 
                 const res = await fetch('/api/transfer', {
                     method: 'POST',
-                    body: JSON.stringify({ origen, destino, transporte, containerNumber, items: jsonData }),
+                    body: JSON.stringify({ 
+                        origen, 
+                        destino, 
+                        transporte, 
+                        containerNumber, 
+                        items: jsonData,
+                        userId: getUserId() // Para la auditoría
+                    }),
                     headers: { 'Content-Type': 'application/json' }
                 });
 
@@ -166,7 +198,7 @@ if (dispatchBtn) {
 }
 
 // ====================================================================
-// MÓDULO 3: DASHBOARD GLOBAL (Grilla, Filtros y Excel)
+// MÓDULO 3: DASHBOARD GLOBAL
 // ====================================================================
 const dashboardContainer = document.getElementById('dashboard-container');
 const refreshBtn = document.getElementById('refresh-dashboard');
@@ -177,56 +209,39 @@ const exportBtn = document.getElementById('export-dashboard-btn');
 if (dashboardContainer) {
     const loadDashboard = async () => {
         dashboardContainer.innerHTML = '<p>⏳ Consultando matriz global...</p>';
-        
         try {
             const res = await fetch('/api/dashboard');
             const result = await res.json();
 
-            // Verificamos que vengan los datos Y los nodos (columnas)
             if (res.ok && result.data && result.nodes) {
-                const nodes = result.nodes; // Array de depósitos ordenados
-                const inventory = result.data; // Array de filas de inventario
+                const nodes = result.nodes;
+                const inventory = result.data;
 
                 if (inventory.length === 0) {
                     dashboardContainer.innerHTML = '<p style="color: gray;">Sin stock registrado en el sistema.</p>';
                     return;
                 }
 
-                // Agrupamos el inventario por SKU
                 const productMap = new Map();
 
                 inventory.forEach(row => {
-                    // Si el producto no existe en el mapa, lo creamos con stock 0 en todos los depósitos
                     if (!productMap.has(row.sku)) {
                         const defaultStock = {};
                         nodes.forEach(n => defaultStock[n.id] = { phys: 0, trans: 0 });
                         productMap.set(row.sku, { name: row.product_name, stock: defaultStock });
                     }
-                    
-                    // Llenamos el stock real para el depósito correspondiente
                     if (row.node_id) {
-                        productMap.get(row.sku).stock[row.node_id] = { 
-                            phys: row.quantity || 0, 
-                            trans: row.transit_qty || 0 
-                        };
+                        productMap.get(row.sku).stock[row.node_id] = { phys: row.quantity || 0, trans: row.transit_qty || 0 };
                     }
                 });
 
-                // Construimos la tabla HTML dinámicamente
                 let html = '<table class="excel-table"><thead><tr>';
                 html += '<th>SKU</th><th>Producto</th>';
-                
-                // Dibujamos las cabeceras respetando el ORDEN de los Nodos
                 nodes.forEach(n => html += `<th>${n.name}</th>`);
                 html += '</tr></thead><tbody>';
 
-                // Dibujamos las filas de productos
                 productMap.forEach((data, sku) => {
-                    html += `<tr>
-                                <td><strong>${sku}</strong></td>
-                                <td>${data.name}</td>`;
-                    
-                    // Rellenamos las celdas en el mismo orden de los Nodos
+                    html += `<tr><td><strong>${sku}</strong></td><td>${data.name}</td>`;
                     nodes.forEach(n => {
                         const stock = data.stock[n.id];
                         const transHtml = stock.trans > 0 ? `<span class="transit-badge" style="color:#d97706; font-size:0.8rem; margin-left:5px;">✈️ +${stock.trans}</span>` : '';
@@ -237,8 +252,6 @@ if (dashboardContainer) {
 
                 html += '</tbody></table>';
                 dashboardContainer.innerHTML = html;
-
-                // Re-aplicar filtros
                 applyFilters();
 
             } else {
@@ -249,34 +262,27 @@ if (dashboardContainer) {
         }
     };
 
-    // --- MOTOR DE FILTRADO COMBINADO ---
     const applyFilters = () => {
         const term = (searchInput?.value || '').toLowerCase();
         const onlyTransit = transitCheckbox?.checked || false;
-        
         const rows = dashboardContainer.querySelectorAll('tbody tr');
         rows.forEach(row => {
             const sku = row.cells[0].textContent.toLowerCase();
             const name = row.cells[1].textContent.toLowerCase();
             const hasTransit = row.querySelector('.transit-badge') !== null;
-            
             const matchesSearch = sku.includes(term) || name.includes(term);
             const matchesTransit = !onlyTransit || hasTransit;
-            
             row.style.display = (matchesSearch && matchesTransit) ? '' : 'none';
         });
     };
 
-    // Eventos de Filtrado
     if (searchInput) searchInput.addEventListener('input', applyFilters);
     if (transitCheckbox) transitCheckbox.addEventListener('change', applyFilters);
 
-    // --- EXPORTACIÓN A EXCEL ---
     if (exportBtn) {
         exportBtn.addEventListener('click', () => {
             let csv = [];
             const rows = dashboardContainer.querySelectorAll('table tr');
-            
             rows.forEach(row => {
                 if (row.style.display !== 'none') {
                     let cols = row.querySelectorAll('td, th');
@@ -288,11 +294,10 @@ if (dashboardContainer) {
                     csv.push(rowData.join(','));
                 }
             });
-
             const blob = new Blob([csv.join('\n')], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement("a");
             link.href = URL.createObjectURL(blob);
-            link.setAttribute("download", `Inventario_Viiggo_Global.csv`);
+            link.setAttribute("download", `Inventario_VIGGO_Global.csv`);
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
@@ -304,7 +309,7 @@ if (dashboardContainer) {
 }
 
 // ====================================================================
-// MÓDULO 4: RECEPCIÓN DE MERCADERÍA (Solo se ejecuta si existe el botón)
+// MÓDULO 4: RECEPCIÓN DE MERCADERÍA
 // ====================================================================
 const searchTransitBtn = document.getElementById('search-transit-btn');
 const transitResults = document.getElementById('transit-results');
@@ -324,7 +329,6 @@ if (searchTransitBtn) {
                     return;
                 }
 
-                // Armar la tabla con los resultados
                 let tableHtml = `
                     <table class="transit-table">
                         <thead>
@@ -356,7 +360,6 @@ if (searchTransitBtn) {
                 tableHtml += `</tbody></table><div id="recv-msg" style="margin-top:10px; font-weight:bold;"></div>`;
                 transitResults.innerHTML = tableHtml;
 
-                // Agregar el evento click a los nuevos botones "Recibir Stock"
                 document.querySelectorAll('.receive-btn').forEach(btn => {
                     btn.addEventListener('click', async (e) => {
                         const targetBtn = e.target;
@@ -371,7 +374,7 @@ if (searchTransitBtn) {
                         try {
                             const rx = await fetch('/api/receive', {
                                 method: 'POST',
-                                body: JSON.stringify({ nodeId: nId, productId: pId, qty: q }),
+                                body: JSON.stringify({ nodeId: nId, productId: pId, qty: q, userId: getUserId() }),
                                 headers: { 'Content-Type': 'application/json' }
                             });
                             const rxData = await rx.json();
@@ -379,7 +382,7 @@ if (searchTransitBtn) {
                             if (rx.ok) {
                                 msgBox.style.color = 'green';
                                 msgBox.innerText = `✅ Éxito: ${rxData.message}`;
-                                targetBtn.parentElement.parentElement.style.opacity = '0.3'; // Ocultar visualmente la fila procesada
+                                targetBtn.parentElement.parentElement.style.opacity = '0.3'; 
                             } else {
                                 msgBox.style.color = 'red';
                                 msgBox.innerText = `❌ Error: ${rxData.error}`;
@@ -407,7 +410,7 @@ if (searchTransitBtn) {
 const transitViewContainer = document.getElementById('active-transits-container');
 const filterOrigin = document.getElementById('filter-origin');
 const filterDest = document.getElementById('filter-dest');
-const searchTransit = document.getElementById('search-transit'); // Input opcional en HTML para buscar contenedor/SKU
+const searchTransit = document.getElementById('search-transit'); 
 const refreshTransitsBtn = document.getElementById('refresh-transits');
 
 if (transitViewContainer) {
@@ -418,7 +421,7 @@ if (transitViewContainer) {
             const result = await res.json();
             
             if (res.ok && result.data) {
-                window.transitData = result.data; // Guardamos en memoria para los filtros rápidos
+                window.transitData = result.data; 
                 renderTransitTable();
             } else {
                 transitViewContainer.innerHTML = `<p style="color:red;">❌ Error: ${result.error}</p>`;
@@ -442,12 +445,10 @@ if (transitViewContainer) {
         const destFilter = filterDest ? filterDest.value : 'ALL';
         const searchTerm = searchTransit ? searchTransit.value.toLowerCase().trim() : '';
 
-        // Filtrar datos en vivo
         const filtered = window.transitData.filter(item => {
             const matchOrig = origFilter === 'ALL' || item.origin === origFilter;
             const matchDest = destFilter === 'ALL' || item.destination === destFilter;
             
-            // Lógica para buscar por número de contenedor, SKU o nombre de producto
             const containerStr = (item.container_number || 'PENDIENTE').toLowerCase();
             const skuStr = (item.sku || '').toLowerCase();
             const prodStr = (item.product || '').toLowerCase();
@@ -480,7 +481,6 @@ if (transitViewContainer) {
         `;
 
         filtered.forEach(item => {
-            // Función segura para formatear las fechas a DD/MM/YYYY
             const formatD = (dStr) => {
                 if(!dStr) return 'Calculando...';
                 try {
@@ -512,18 +512,16 @@ if (transitViewContainer) {
         transitViewContainer.innerHTML = html;
     };
 
-    // Listeners para re-dibujar la tabla al instante cuando tocas un filtro o escribes
     if (filterOrigin) filterOrigin.addEventListener('change', renderTransitTable);
     if (filterDest) filterDest.addEventListener('change', renderTransitTable);
     if (searchTransit) searchTransit.addEventListener('input', renderTransitTable);
     if (refreshTransitsBtn) refreshTransitsBtn.addEventListener('click', loadActiveTransits);
 
-    // Cargar datos al abrir la página
     loadActiveTransits();
 }
 
 // ====================================================================
-// MÓDULO 6: GESTOR DE PRECIOS HÍBRIDO (Excel + Edición Manual)
+// MÓDULO 6: GESTOR DE PRECIOS
 // ====================================================================
 const priceLoadBtn = document.getElementById('load-prices-btn');
 const pricesTable = document.getElementById('prices-table');
@@ -532,13 +530,11 @@ const priceStatus = document.getElementById('price-list-status');
 const savePricesBtn = document.getElementById('save-prices-btn');
 const priceExcelInput = document.getElementById('price-excel-file');
 
-// 1. Mostrar siempre el botón de guardar si existe en el HTML
 if (savePricesBtn) {
     savePricesBtn.style.display = 'inline-flex';
 }
 
 if (priceLoadBtn) {
-    // 2. Consultar Precios Actuales (Para edición manual)
     priceLoadBtn.addEventListener('click', async () => {
         const nodeId = document.getElementById('price-node-select').value;
         priceStatus.innerHTML = '⏳ Cargando lista de precios...';
@@ -554,45 +550,40 @@ if (priceLoadBtn) {
         } catch (err) { priceStatus.innerText = '❌ Error al conectar.'; }
     });
 
-    // 3. Procesar Excel (Soporta solo SKU y Precio)
-    priceExcelInput.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        
-        const reader = new FileReader();
-        reader.onload = (evt) => {
-            const data = new Uint8Array(evt.target.result);
-            const workbook = XLSX.read(data, { type: 'array' });
-            const sheet = workbook.Sheets[workbook.SheetNames[0]];
-            const json = XLSX.utils.sheet_to_json(sheet);
+    if(priceExcelInput) {
+        priceExcelInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
             
-            // Mapeo "A prueba de balas" (ignora espacios invisibles y mayúsculas)
-            const previewData = json.map(row => {
-                let sku = '', name = 'Actualización rápida', price = 0, product_id = null;
+            const reader = new FileReader();
+            reader.onload = (evt) => {
+                const data = new Uint8Array(evt.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                const json = XLSX.utils.sheet_to_json(sheet);
                 
-                for (const key in row) {
-                    const k = key.trim().toLowerCase();
-                    if (k === 'sku') sku = row[key].toString().trim();
-                    if (k === 'nombre' || k === 'name' || k === 'producto') name = row[key].toString().trim();
-                    if (k === 'precio' || k === 'price') price = parseFloat(row[key]) || 0;
-                    if (k === 'id') product_id = row[key];
-                }
+                const previewData = json.map(row => {
+                    let sku = '', name = 'Actualización rápida', price = 0, product_id = null;
+                    
+                    for (const key in row) {
+                        const k = key.trim().toLowerCase();
+                        if (k === 'sku') sku = row[key].toString().trim();
+                        if (k === 'nombre' || k === 'name' || k === 'producto') name = row[key].toString().trim();
+                        if (k === 'precio' || k === 'price') price = parseFloat(row[key]) || 0;
+                        if (k === 'id') product_id = row[key];
+                    }
+                    return { product_id, sku, name, price };
+                });
 
-                return { product_id, sku, name, price };
-            });
+                const validData = previewData.filter(item => item.sku !== '');
+                renderPriceRows(validData);
+                priceStatus.innerHTML = '✨ <span style="color:green;">Excel cargado. Revisa y haz clic en "Guardar Cambios".</span>';
+                priceExcelInput.value = ''; 
+            };
+            reader.readAsArrayBuffer(file);
+        });
+    }
 
-            // Filtramos las filas que hayan quedado sin SKU
-            const validData = previewData.filter(item => item.sku !== '');
-
-            renderPriceRows(validData);
-            priceStatus.innerHTML = '✨ <span style="color:green;">Excel cargado. Revisa y haz clic en "Guardar Cambios".</span>';
-            // Vaciamos el input para permitir subir el mismo archivo si hay error
-            priceExcelInput.value = ''; 
-        };
-        reader.readAsArrayBuffer(file);
-    });
-
-    // Función para dibujar las filas editables
     const renderPriceRows = (data) => {
         pricesTbody.innerHTML = '';
         data.forEach(item => {
@@ -613,7 +604,6 @@ if (priceLoadBtn) {
         pricesTable.style.display = 'table';
     };
 
-    // 4. Guardar cambios (Vengan de edición manual o de Excel)
     if (savePricesBtn) {
         savePricesBtn.addEventListener('click', async () => {
             const nodeId = document.getElementById('price-node-select').value;
@@ -637,7 +627,11 @@ if (priceLoadBtn) {
             try {
                 const res = await fetch('/api/prices', {
                     method: 'POST',
-                    body: JSON.stringify({ nodeId, prices }),
+                    body: JSON.stringify({ 
+                        nodeId, 
+                        prices,
+                        userId: getUserId() // Para la auditoría
+                    }),
                     headers: { 'Content-Type': 'application/json' }
                 });
                 
@@ -645,7 +639,6 @@ if (priceLoadBtn) {
                 
                 if (res.ok) {
                     alert('✅ ' + (result.message || 'Lista de precios actualizada correctamente.'));
-                    // Limpiamos la tabla visual para confirmar que se guardó
                     pricesTable.style.display = 'none';
                     priceStatus.style.display = 'block';
                     priceStatus.innerHTML = '✅ <span style="color:green;">Precios guardados. Puedes hacer otra carga.</span>';
@@ -679,12 +672,9 @@ if (loadDocsBtn) {
 
             if (res.ok && result.data && result.data.length > 0) {
                 let html = '';
-                
-                // Ordenar de más reciente a más antiguo
                 const sortedData = result.data.sort((a, b) => new Date(b.date) - new Date(a.date));
 
                 sortedData.forEach(t => {
-                    // Calculamos el valor total para mostrarlo en la tarjeta
                     const totalInvoice = t.items.reduce((sum, item) => sum + (item.quantity * item.price), 0);
                     const formattedDate = new Date(t.date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
 
@@ -700,12 +690,8 @@ if (loadDocsBtn) {
                                 <p><strong>Artículos:</strong> ${t.items.length} SKUs distintos</p>
                             </div>
                             <div class="doc-actions">
-                                <button class="btn-excel" onclick="exportToExcel(${JSON.stringify(t).replace(/"/g, '&quot;')})">
-                                    📊 CSV
-                                </button>
-                                <button class="btn-pdf" onclick="exportToPDF(${JSON.stringify(t).replace(/"/g, '&quot;')})">
-                                    📄 PDF
-                                </button>
+                                <button class="btn-excel" onclick="exportToExcel(${JSON.stringify(t).replace(/"/g, '&quot;')})">📊 CSV</button>
+                                <button class="btn-pdf" onclick="exportToPDF(${JSON.stringify(t).replace(/"/g, '&quot;')})">📄 PDF</button>
                             </div>
                         </div>
                     `;
@@ -717,17 +703,13 @@ if (loadDocsBtn) {
                         <p style="color: #64748b;">No se encontraron transferencias recientes para este destino.</p>
                     </div>`;
             }
-        } catch (err) { 
-            docsContainer.innerHTML = `<div style="grid-column: 1/-1; color:red; text-align:center;">${err.message}</div>`; 
-        }
+        } catch (err) { docsContainer.innerHTML = `<div style="grid-column: 1/-1; color:red; text-align:center;">${err.message}</div>`; }
     });
 }
 
-// Exportación CSV (Excel)
 window.exportToExcel = (data) => {
     let csv = 'SKU,Producto,Cantidad,Precio Unitario (USD),Total (USD)\n';
     data.items.forEach(item => {
-        // Limpiamos comas en los nombres para no romper el CSV
         const cleanName = item.product_name.replace(/,/g, '');
         csv += `${item.sku},${cleanName},${item.quantity},${item.price},${(item.quantity * item.price).toFixed(2)}\n`;
     });
@@ -735,13 +717,12 @@ window.exportToExcel = (data) => {
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
-    link.setAttribute("download", `Proforma_Viiggo_Orden_${data.id}.csv`);
+    link.setAttribute("download", `Proforma_VIGGO_Orden_${data.id}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
 };
 
-// Generador de PDF Nativo
 window.exportToPDF = (data) => {
     const printWindow = window.open('', '_blank');
     let itemsHtml = '';
@@ -783,9 +764,8 @@ window.exportToPDF = (data) => {
         <body>
             <div class="header">
                 <h1 class="title">PROFORMA INVOICE</h1>
-                <p class="subtitle">VIIGGO PROFESSIONAL WMS - International Logistics</p>
+                <p class="subtitle">VIGGO PROFESSIONAL WMS - International Logistics</p>
             </div>
-            
             <table class="info-table">
                 <tr>
                     <td><strong>Transfer Order:</strong> #${data.id}</td>
@@ -796,34 +776,15 @@ window.exportToPDF = (data) => {
                     <td style="text-align:right;"><strong>Destination:</strong> ${data.destination}</td>
                 </tr>
             </table>
-
             <table class="items-table">
-                <thead>
-                    <tr>
-                        <th>SKU</th>
-                        <th>Descripción</th>
-                        <th style="text-align:center;">Qty</th>
-                        <th style="text-align:right;">Unit Price</th>
-                        <th style="text-align:right;">Subtotal</th>
-                    </tr>
-                </thead>
+                <thead><tr><th>SKU</th><th>Descripción</th><th style="text-align:center;">Qty</th><th style="text-align:right;">Unit Price</th><th style="text-align:right;">Subtotal</th></tr></thead>
                 <tbody>${itemsHtml}</tbody>
-                <tfoot>
-                    <tr class="total-row">
-                        <th colspan="4" style="text-align:right;">TOTAL AMOUNT (USD):</th>
-                        <th style="text-align:right;">$${total.toFixed(2)}</th>
-                    </tr>
-                </tfoot>
+                <tfoot><tr class="total-row"><th colspan="4" style="text-align:right;">TOTAL AMOUNT (USD):</th><th style="text-align:right;">$${total.toFixed(2)}</th></tr></tfoot>
             </table>
-            
-            <div class="footer">
-                Terms: Intercompany transfer. Goods in transit are insured by Viiggo Logistics Group.<br>
-                Document generated automatically by Viiggo WMS.
-            </div>
+            <div class="footer">Terms: Intercompany transfer. Goods in transit are insured by VIGGO Logistics Group.<br>Document generated automatically by VIGGO WMS.</div>
         </body>
         </html>
     `);
-    
     printWindow.document.close();
     setTimeout(() => { printWindow.print(); }, 500);
 };
@@ -836,14 +797,12 @@ const manFabSelect = document.getElementById('man-fab');
 const btnAddFactory = document.getElementById('btn-add-factory');
 const skuHelper = document.getElementById('sku-helper');
 
-// 1. Cargar las fábricas en el select al abrir la página
 const loadFactories = async () => {
     if (!manFabSelect) return;
     try {
         const res = await fetch('/api/factories');
         const result = await res.json();
         if (res.ok && result.data) {
-            // Guardamos la opción seleccionada actualmente si existe
             const currentVal = manFabSelect.value;
             manFabSelect.innerHTML = '<option value="">Seleccione una fábrica...</option>';
             result.data.forEach(f => {
@@ -856,7 +815,6 @@ const loadFactories = async () => {
 
 if (manFabSelect) loadFactories();
 
-// 2. Crear nueva fábrica
 if (btnAddFactory) {
     btnAddFactory.addEventListener('click', async (e) => {
         e.preventDefault();
@@ -881,9 +839,7 @@ if (btnAddFactory) {
     });
 }
 
-// 3. Autocompletado al escribir el SKU
 if (manSkuInput) {
-    // Evento "blur" se dispara cuando el usuario sale de la caja de texto del SKU
     manSkuInput.addEventListener('blur', async () => {
         const sku = manSkuInput.value.trim();
         if (!sku) return;
@@ -898,27 +854,18 @@ if (manSkuInput) {
             if (res.ok && result.data) {
                 skuHelper.innerText = '✅ Artículo encontrado. Autocompletado.';
                 skuHelper.style.color = 'green';
-                
-                // Rellenar campos
                 document.getElementById('man-name').value = result.data.name || '';
                 document.getElementById('man-cat').value = result.data.category || '';
-                
-                // Si la fábrica existe en nuestro select, la marcamos
                 if (result.data.factory_name) {
                     const exists = Array.from(manFabSelect.options).some(opt => opt.value === result.data.factory_name);
-                    if (exists) {
-                        manFabSelect.value = result.data.factory_name;
-                    }
+                    if (exists) manFabSelect.value = result.data.factory_name;
                 }
             } else {
                 skuHelper.innerText = '✨ Nuevo artículo (No registrado)';
                 skuHelper.style.color = 'var(--text-muted)';
             }
-        } catch (e) {
-            skuHelper.style.display = 'none';
-        }
+        } catch (e) { skuHelper.style.display = 'none'; }
         
-        // Ocultar el mensaje de ayuda después de 3 segundos
         setTimeout(() => { skuHelper.style.display = 'none'; }, 3000);
     });
 }
@@ -965,21 +912,4 @@ document.getElementById('btn-add-node')?.addEventListener('click', async () => {
     loadNodes();
 });
 
-// Inicializar
 loadNodes();
-
-
-// Mostrar nombre real del usuario logueado en el sidebar
-document.addEventListener("DOMContentLoaded", () => {
-    const userNameElement = document.querySelector('.brand-text strong');
-    const userRoleElement = document.querySelector('.brand-text small');
-    const savedName = localStorage.getItem('viggo_user_name');
-    const savedRole = localStorage.getItem('viggo_user_role');
-    
-    if (userNameElement && savedName) {
-        userNameElement.innerText = `Usuario: ${savedName}`;
-    }
-    if (userRoleElement && savedRole) {
-        userRoleElement.innerText = savedRole;
-    }
-});
