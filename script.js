@@ -967,3 +967,19 @@ document.getElementById('btn-add-node')?.addEventListener('click', async () => {
 
 // Inicializar
 loadNodes();
+
+
+// Mostrar nombre real del usuario logueado en el sidebar
+document.addEventListener("DOMContentLoaded", () => {
+    const userNameElement = document.querySelector('.brand-text strong');
+    const userRoleElement = document.querySelector('.brand-text small');
+    const savedName = localStorage.getItem('viggo_user_name');
+    const savedRole = localStorage.getItem('viggo_user_role');
+    
+    if (userNameElement && savedName) {
+        userNameElement.innerText = `Usuario: ${savedName}`;
+    }
+    if (userRoleElement && savedRole) {
+        userRoleElement.innerText = savedRole;
+    }
+});
