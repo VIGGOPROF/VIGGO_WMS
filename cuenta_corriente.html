@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cuenta Corriente | VIGGO WMS</title>
+    <link rel="stylesheet" href="style.css">
+    <script>if (!localStorage.getItem('viggo_auth_token')) window.location.href = 'login.html';</script>
+    <style>
+        .cc-header { display: flex; justify-content: space-between; align-items: flex-end; background: white; padding: 25px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 20px; }
+        .cc-client-info h2 { margin: 0 0 5px 0; color: #0f172a; font-size: 1.8rem; }
+        .cc-client-info p { margin: 0; color: #64748b; font-size: 0.95rem; }
+        .cc-balance-box { text-align: right; }
+        .cc-balance-box p { margin: 0 0 5px 0; font-weight: bold; text-transform: uppercase; font-size: 0.8rem; color: #64748b; }
+        .cc-balance-box h1 { margin: 0; font-size: 2.5rem; }
+        .balance-deuda { color: #ef4444; }
+        .balance-favor { color: #10b981; }
+        
+        .cc-table th { background: #0f172a; color: white; padding: 12px 10px; text-align: left; font-size: 0.85rem; }
+        .cc-table td { padding: 12px 10px; border-bottom: 1px solid #e2e8f0; font-size: 0.9rem; }
+        .tx-venta { color: #ef4444; font-weight: bold; } /* Rojo porque suma deuda */
+        .tx-pago { color: #10b981; font-weight: bold; } /* Verde porque resta deuda */
+
+        .btn-pay { background: #0369a1; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; margin-top: 10px; transition: 0.2s; }
+        .btn-pay:hover { background: #0284c7; }
+
+        /* Estilos de Modal */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; }
+        .modal { background: white; padding: 25px; border-radius: 12px; width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+        .input-group { margin-bottom: 15px; }
+        .input-group label { display: block; font-size: 0.85rem; font-weight: bold; margin-bottom: 5px; color: #475569; }
+        .input-group input, .input-group textarea { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+        .btn-cancel { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-weight:bold;}
+        .btn-confirm { background: #10b981; color: white; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="brand-logo">V</div>
+            <div class="brand-text"><strong id="user-display-name">Usuario</strong><small id="user-display-role">Logística</small></div>
+        </div>
+        <nav class="nav">
+            <a href="dashboard.html"><span class="nav-icon">📊</span> Dashboard</a>
+            <a href="compras.html"><span class="nav-icon">🏭</span> Compras (Fábrica)</a>
+            <a href="catalogo.html"><span class="nav-icon">📖</span> Catálogo</a>
+            <a href="index.html"><span class="nav-icon">📦</span> Ingreso (Manual)</a>
+            <a href="distribucion.html"><span class="nav-icon">🚛</span> Distribución</a>
+            <a href="transito.html"><span class="nav-icon">🚢</span> En Tránsito</a>
+            <a href="recepcion.html"><span class="nav-icon">📥</span> Recepción Destino</a>
+            <a href="precios.html"><span class="nav-icon">💰</span> Precios</a>
+            
+            <div style="margin: 15px 0 5px 15px; font-size: 0.75rem; color: #94a3b8; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">Comercial</div>
+            <a href="clientes.html" class="active"><span class="nav-icon">👥</span> Clientes</a>
+            <a href="ventas.html"><span class="nav-icon">🛒</span> Ventas (POS)</a>
+            
+            <div style="margin: 15px 0 5px 15px; font-size: 0.75rem; color: #94a3b8; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">Reportes</div>
+            <a href="documentos.html"><span class="nav-icon">📄</span> Documentos</a>
+            <a href="informes.html"><span class="nav-icon">📈</span> Informes</a>
+        </nav>
+    </aside>
+
+    <main class="main-content">
+        <div class="module-container">
+            
+            <a href="clientes.html" style="color: var(--primary); text-decoration: none; font-weight: bold; display: inline-block; margin-bottom: 15px;">← Volver al Directorio</a>
+
+            <div class="cc-header">
+                <div class="cc-client-info">
+                    <h2 id="view-client-name">Cargando...</h2>
+                    <p id="view-client-tax">CUIT/RUT: -</p>
+                    <p id="view-client-node">Sede: -</p>
+                    <button class="btn-pay" onclick="openPaymentModal()">💸 Ingresar Pago / Abono</button>
+                </div>
+                <div class="cc-balance-box">
+                    <p>Saldo Actual (Cuenta Corriente)</p>
+                    <h1 id="view-client-balance">$ 0.00</h1>
+                </div>
+            </div>
+
+            <div style="background: white; border: 1px solid var(--border); border-radius: 8px; overflow: hidden;">
+                <table class="cc-table" style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Concepto</th>
+                            <th>Doc. Referencia</th>
+                            <th>Notas</th>
+                            <th style="text-align: right;">Cargo (Debe)</th>
+                            <th style="text-align: right;">Abono (Haber)</th>
+                            <th style="text-align: right; background: #f8fafc; border-left: 1px solid #e2e8f0;">Saldo Acumulado</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tx-tbody">
+                        <tr><td colspan="7" style="text-align: center; padding: 20px;">Buscando movimientos...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+        </div>
+    </main>
+
+    <div class="modal-overlay" id="payment-modal">
+        <div class="modal">
+            <h3 style="margin-top: 0; color: #0f172a; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px;">Registrar Ingreso de Pago</h3>
+            
+            <form id="payment-form">
+                <div class="input-group">
+                    <label>Monto Recibido (USD / Moneda Local) *</label>
+                    <input type="number" step="0.01" id="pay-amount" required min="0.01" placeholder="Ej: 1500.00">
+                </div>
+                <div class="input-group">
+                    <label>Documento de Referencia / Comprobante</label>
+                    <input type="text" id="pay-ref" placeholder="Ej: TRF-Banco-8839">
+                </div>
+                <div class="input-group">
+                    <label>Notas Adicionales</label>
+                    <textarea id="pay-notes" rows="2" placeholder="Ej: Pago parcial correspondiente a factura 001..."></textarea>
+                </div>
+
+                <div id="pay-status" style="font-size: 0.85rem; font-weight: bold; text-align: center; margin-bottom: 10px;"></div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn-cancel" onclick="closePaymentModal()">Cancelar</button>
+                    <button type="submit" class="btn-confirm" id="btn-submit-pay">Confirmar Pago</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const clientId = urlParams.get('client_id');
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const savedName = localStorage.getItem('viggo_user_name');
+            if (savedName) document.getElementById('user-display-name').innerText = `Usuario: ${savedName}`;
+            
+            if (!clientId) {
+                alert("No se especificó un cliente.");
+                window.location.href = 'clientes.html';
+                return;
+            }
+            loadAccount();
+        });
+
+        const getUserIdLocal = () => {
+            const token = localStorage.getItem('viggo_auth_token');
+            if (!token) return null;
+            try { return JSON.parse(atob(token)).id; } catch (e) { return null; }
+        };
+
+        const loadAccount = async () => {
+            try {
+                const res = await fetch(`/api/account?client_id=${clientId}`);
+                const result = await res.json();
+                
+                if (res.ok) {
+                    renderHeader(result.client, result.transactions);
+                    renderLedger(result.transactions);
+                } else {
+                    alert(result.error);
+                }
+            } catch (error) {
+                console.error("Error cargando cuenta corriente.");
+            }
+        };
+
+        const renderHeader = (client, transactions) => {
+            document.getElementById('view-client-name').innerText = client.business_name;
+            document.getElementById('view-client-tax').innerText = `CUIT/RUT: ${client.tax_id}`;
+            document.getElementById('view-client-node').innerText = `Sede (País): ${client.node_name}`;
+
+            // Calcular saldo total
+            const totalBalance = transactions.reduce((acc, tx) => acc + tx.amount, 0);
+            const balanceEl = document.getElementById('view-client-balance');
+            
+            balanceEl.innerText = `$ ${Math.abs(totalBalance).toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+            balanceEl.className = totalBalance > 0 ? 'balance-deuda' : (totalBalance < 0 ? 'balance-favor' : '');
+            
+            if (totalBalance > 0) balanceEl.innerText = 'DEBE: ' + balanceEl.innerText;
+            if (totalBalance < 0) balanceEl.innerText = 'A FAVOR: ' + balanceEl.innerText;
+        };
+
+        const renderLedger = (transactions) => {
+            const tbody = document.getElementById('tx-tbody');
+            
+            if (transactions.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 20px;">No hay movimientos registrados.</td></tr>';
+                return;
+            }
+
+            let html = '';
+            let runningBalance = 0; // Saldo acumulado línea por línea
+
+            transactions.forEach(tx => {
+                runningBalance += tx.amount; // Matématica: Venta suma (+), Pago resta (-)
+                
+                const date = new Date(tx.created_at).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' });
+                const isSale = tx.transaction_type === 'VENTA';
+                
+                // Formateo de las columnas de dinero
+                const cargo = isSale ? `$${tx.amount.toFixed(2)}` : '';
+                const abono = !isSale ? `$${Math.abs(tx.amount).toFixed(2)}` : '';
+                const formatBalance = runningBalance < 0 ? `-$${Math.abs(runningBalance).toFixed(2)}` : `$${runningBalance.toFixed(2)}`;
+
+                html += `
+                    <tr>
+                        <td>${date}</td>
+                        <td class="${isSale ? 'tx-venta' : 'tx-pago'}">${tx.transaction_type}</td>
+                        <td><strong>${tx.reference_doc || '-'}</strong></td>
+                        <td style="font-size: 0.8rem; color:#64748b;">${tx.notes || '-'}</td>
+                        <td style="text-align: right; color:#ef4444;">${cargo}</td>
+                        <td style="text-align: right; color:#10b981;">${abono}</td>
+                        <td style="text-align: right; font-weight: bold; background: #f8fafc; border-left: 1px solid #e2e8f0;">${formatBalance}</td>
+                    </tr>
+                `;
+            });
+
+            tbody.innerHTML = html;
+        };
+
+        // Lógica del Modal de Pagos
+        const modal = document.getElementById('payment-modal');
+        window.openPaymentModal = () => { modal.style.display = 'flex'; };
+        window.closePaymentModal = () => { modal.style.display = 'none'; document.getElementById('payment-form').reset(); document.getElementById('pay-status').innerText = ''; };
+
+        document.getElementById('payment-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('btn-submit-pay');
+            const status = document.getElementById('pay-status');
+            
+            const payload = {
+                clientId: clientId,
+                amount: document.getElementById('pay-amount').value,
+                referenceDoc: document.getElementById('pay-ref').value,
+                notes: document.getElementById('pay-notes').value,
+                userId: getUserIdLocal()
+            };
+
+            btn.disabled = true;
+            btn.innerText = 'Impactando...';
+            
+            try {
+                const res = await fetch('/api/account', {
+                    method: 'POST',
+                    body: JSON.stringify(payload),
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                const result = await res.json();
+                
+                if (res.ok) {
+                    status.innerHTML = `<span style="color: green;">✅ ${result.message}</span>`;
+                    setTimeout(() => {
+                        closePaymentModal();
+                        loadAccount(); // Recargar la página con los nuevos saldos
+                    }, 1500);
+                } else {
+                    status.innerHTML = `<span style="color: red;">❌ ${result.error}</span>`;
+                }
+            } catch (err) {
+                status.innerHTML = `<span style="color: red;">❌ Error de red.</span>`;
+            } finally {
+                btn.disabled = false;
+                btn.innerText = 'Confirmar Pago';
+            }
+        });
+    </script>
+</body>
+</html>
