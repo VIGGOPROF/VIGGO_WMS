@@ -137,6 +137,7 @@
     <script>
         let clientsList = [];
         let currentClient = null;
+        let previousClientId = ''; // Guarda el ID anterior para cancelar el cambio
         let priceList = new Map(); // Mapa de precios para el país seleccionado
         let cart = []; // {sku, name, qty, price, subtotal}
 
@@ -168,19 +169,37 @@
             } catch (error) { console.error("Error", error); }
         };
 
-        // 2. Al seleccionar cliente, cargar su lista de precios
+        // 2. Lógica al cambiar de cliente
         document.getElementById('pos-client-select').addEventListener('change', async (e) => {
             const clientId = e.target.value;
             const card = document.getElementById('client-card');
             const cargaBox = document.getElementById('carga-box');
             
+            // VALIDACIÓN: Si hay cosas en el carrito y cambia a otro cliente
+            if (cart.length > 0 && clientId !== previousClientId) {
+                const conf = confirm("⚠️ Tienes artículos en el pedido actual.\n\nSi cambias de cliente, se borrará el carrito y se aplicará la lista de precios del nuevo país.\n\n¿Deseas continuar y borrar el pedido?");
+                if (!conf) {
+                    // El usuario canceló: volvemos a seleccionar el cliente que estaba antes
+                    e.target.value = previousClientId;
+                    return; 
+                } else {
+                    // El usuario aceptó: vaciamos el carrito
+                    cart = [];
+                    updateCartUI();
+                }
+            }
+
             if (!clientId) {
                 card.style.display = 'none';
                 cargaBox.style.opacity = '0.5';
                 cargaBox.style.pointerEvents = 'none';
                 currentClient = null;
+                previousClientId = '';
                 return;
             }
+
+            // Actualizamos el cliente anterior para la próxima validación
+            previousClientId = clientId;
 
             currentClient = clientsList.find(c => c.id.toString() === clientId);
             document.getElementById('cc-name').innerHTML = `<strong>Razón Social:</strong> ${currentClient.business_name}`;
@@ -325,7 +344,7 @@
 
             const payload = {
                 clientId: currentClient.id,
-                items: cart.map(i => ({ sku: i.sku, qty: i.qty })), // API toma precio de la BD
+                items: cart.map(i => ({ sku: i.sku, qty: i.qty })),
                 userId: getUserIdLocal()
             };
 
@@ -347,8 +366,10 @@
                     // Limpiar Venta
                     cart = [];
                     updateCartUI();
-                    document.getElementById('pos-client-select').value = '';
-                    document.getElementById('pos-client-select').dispatchEvent(new Event('change'));
+                    
+                    // Opcional: Deseleccionar cliente
+                    // document.getElementById('pos-client-select').value = '';
+                    // document.getElementById('pos-client-select').dispatchEvent(new Event('change'));
                 } else {
                     status.innerHTML = `<span style="color: red;">❌ ${result.error}</span>`;
                 }
