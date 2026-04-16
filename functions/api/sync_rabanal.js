@@ -1,30 +1,75 @@
-// LÓGICA PARA EL WORKER (ENDPOINT: /api/sync_rabanal)
-let newCount = 0;
-let updateCount = 0;
+export async function onRequestPost(context) {
+    const { request, env } = context;
 
-for (const item of requestData.items) {
-    // 1. Intentamos buscar el producto
-    let product = await db.prepare("SELECT id FROM products WHERE sku = ?").bind(item.sku).first();
-    
-    // 2. Si no existe, lo CREAMOS en el catálogo
-    if (!product) {
-        const insertRes = await db.prepare("INSERT INTO products (sku, name) VALUES (?, ?) RETURNING id").bind(item.sku, item.name).first();
-        product = { id: insertRes.id };
-        newCount++;
-    }
+    try {
+        const body = await request.json();
+        const db = env.DB; // Asegúrate de que tu variable de entorno en Cloudflare se llame "DB"
+        
+        let newCount = 0;
+        let updateCount = 0;
 
-    // 3. Verificamos si ya hay stock para ese producto en Argentina HQ (Asumiendo que Node ID 2 = Argentina)
-    let inventory = await db.prepare("SELECT id FROM inventory WHERE product_id = ? AND node_id = 2").bind(product.id).first();
+        if (!body.items || !Array.isArray(body.items)) {
+            return new Response(JSON.stringify({ error: "El archivo no contiene artículos válidos." }), { 
+                status: 400, 
+                headers: { 'Content-Type': 'application/json' } 
+            });
+        }
 
-    // 4. Si hay stock previo, LO ACTUALIZAMOS, si no, LO INSERTAMOS
-    if (inventory) {
-        await db.prepare("UPDATE inventory SET quantity = ? WHERE product_id = ? AND node_id = 2").bind(item.stock, product.id).run();
-        updateCount++;
-    } else {
-        await db.prepare("INSERT INTO inventory (product_id, node_id, quantity) VALUES (?, 2, ?)").bind(product.id, item.stock).run();
-        updateCount++;
+        // ID del depósito de Argentina HQ (Asumimos que es el 2, cámbialo si tu base de datos usa otro ID)
+        const NODE_ID_ARGENTINA = 2;
+
+        for (const item of body.items) {
+            // 1. Buscar si el producto ya existe en el Catálogo Maestro
+            let product = await db.prepare("SELECT id FROM products WHERE sku = ?").bind(item.sku).first();
+            let productId;
+
+            if (!product) {
+                // Si no existe, lo creamos. D1 devuelve el ID en 'meta.last_row_id'
+                const insertInfo = await db.prepare(
+                    "INSERT INTO products (sku, name) VALUES (?, ?)"
+                ).bind(item.sku, item.name).run();
+                
+                productId = insertInfo.meta.last_row_id;
+                newCount++;
+            } else {
+                productId = product.id;
+            }
+
+            // 2. Verificar si ya hay una fila de inventario para este producto en Argentina
+            const inv = await db.prepare(
+                "SELECT id FROM inventory WHERE product_id = ? AND node_id = ?"
+            ).bind(productId, NODE_ID_ARGENTINA).first();
+
+            if (inv) {
+                // Si ya existe, actualizamos solo el stock físico
+                await db.prepare(
+                    "UPDATE inventory SET physical_stock = ? WHERE id = ?"
+                ).bind(item.stock, inv.id).run();
+                updateCount++;
+            } else {
+                // Si no existe inventario en esta sede, creamos la fila inicial en 0 tránsito
+                await db.prepare(
+                    "INSERT INTO inventory (product_id, node_id, physical_stock, transit_stock) VALUES (?, ?, ?, 0)"
+                ).bind(productId, NODE_ID_ARGENTINA, item.stock).run();
+                updateCount++;
+            }
+        }
+
+        // Devolvemos el éxito al frontend para que pinte las tarjetitas de estadísticas
+        return new Response(JSON.stringify({ 
+            success: true, 
+            new_items: newCount, 
+            updated_items: updateCount 
+        }), { 
+            status: 200,
+            headers: { 'Content-Type': 'application/json' } 
+        });
+
+    } catch (error) {
+        // Capturamos cualquier error de la base de datos y lo mandamos al frontend
+        return new Response(JSON.stringify({ error: error.message }), { 
+            status: 500, 
+            headers: { 'Content-Type': 'application/json' } 
+        });
     }
 }
-
-// Retornamos al frontend:
-return Response.json({ success: true, new_items: newCount, updated_items: updateCount });
