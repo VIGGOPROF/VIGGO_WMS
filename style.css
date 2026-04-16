@@ -380,3 +380,42 @@ button:disabled {
     background: #eff6ff !important;
     border-bottom: 3px solid #2563eb !important;
 }
+
+/* =========================================
+   COMPACTACIÓN DE MENÚ LATERAL
+========================================= */
+
+/* 1. Habilitar scroll interno suave y limitar al alto de la pantalla */
+.sidebar {
+    overflow-y: auto !important;
+    max-height: 100vh !important;
+}
+
+/* 2. Barra de scroll minimalista (para que no rompa la estética limpia) */
+.sidebar::-webkit-scrollbar {
+    width: 4px;
+}
+.sidebar::-webkit-scrollbar-thumb {
+    background: #e2e8f0;
+    border-radius: 4px;
+}
+
+/* 3. Compactar los enlaces (botones) */
+.sidebar a {
+    padding: 8px 15px !important; /* Reducimos la altura */
+    font-size: 0.85rem !important; /* Letra apenas más compacta */
+    gap: 10px !important; /* Acerca el ícono al texto */
+}
+
+/* 4. Achicar los márgenes de los títulos de sección (LOGÍSTICA, COMERCIAL) */
+.sidebar p, .sidebar h3, .sidebar span.section-title {
+    margin-top: 15px !important;
+    margin-bottom: 5px !important;
+    font-size: 0.7rem !important;
+    letter-spacing: 0.5px !important;
+}
+
+/* 5. Achicar el bloque del usuario arriba de todo */
+.sidebar .user-profile, .sidebar header, .sidebar > div:first-child {
+    padding: 15px !important;
+}
