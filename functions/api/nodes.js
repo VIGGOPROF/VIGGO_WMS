@@ -4,13 +4,11 @@ export async function onRequest(context) {
   const url = new URL(context.request.url);
 
   try {
-    // LEER DEPÓSITOS
     if (method === "GET") {
       const { results } = await db.prepare("SELECT * FROM nodes ORDER BY display_order ASC").all();
       return new Response(JSON.stringify({ status: "success", data: results }), { headers: {"Content-Type": "application/json"} });
     }
 
-    // EDITAR DEPÓSITO (¡Restaurado!)
     if (method === "PUT") {
       const body = await context.request.json();
       const id = body.id;
@@ -25,7 +23,6 @@ export async function onRequest(context) {
       return new Response(JSON.stringify({ status: "success", message: "Depósito actualizado." }), { headers: {"Content-Type": "application/json"} });
     }
 
-    // BORRAR DEPÓSITO (Con protección de stock)
     if (method === "DELETE") {
       const id = url.searchParams.get('id');
       if (!id) return new Response(JSON.stringify({ error: "Falta el ID." }), { status: 400, headers: {"Content-Type": "application/json"} });
@@ -39,12 +36,14 @@ export async function onRequest(context) {
       return new Response(JSON.stringify({ status: "success" }), { headers: {"Content-Type": "application/json"} });
     }
 
-    // CREAR DEPÓSITO (Por si algún día vuelve a funcionar)
     if (method === "POST") {
       const body = await context.request.json();
       const name = String(body.name || "").trim();
       const order = parseInt(body.order || body.display_order || body.priority) || 99;
-      await db.prepare("INSERT INTO nodes (name, display_order) VALUES (?, ?)").bind(name, order).run();
+      
+      // ¡AQUÍ ESTÁ LA MAGIA! Le mandamos 'AR' para que la base de datos lo acepte
+      await db.prepare("INSERT INTO nodes (name, display_order, country_code) VALUES (?, ?, 'AR')").bind(name, order).run();
+      
       return new Response(JSON.stringify({ status: "success" }), { headers: {"Content-Type": "application/json"} });
     }
 
