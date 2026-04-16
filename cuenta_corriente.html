@@ -7,6 +7,8 @@
     <link rel="stylesheet" href="style.css">
     <script>if (!localStorage.getItem('viggo_auth_token')) window.location.href = 'login.html';</script>
     <style>
+        .cc-controls { background: #f8fafc; border: 1px solid var(--border); padding: 20px; border-radius: 10px; margin-bottom: 20px; display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap; }
+        
         .cc-header { display: flex; justify-content: space-between; align-items: flex-end; background: white; padding: 25px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 20px; }
         .cc-client-info h2 { margin: 0 0 5px 0; color: #0f172a; font-size: 1.8rem; }
         .cc-client-info p { margin: 0; color: #64748b; font-size: 0.95rem; }
@@ -18,11 +20,14 @@
         
         .cc-table th { background: #0f172a; color: white; padding: 12px 10px; text-align: left; font-size: 0.85rem; }
         .cc-table td { padding: 12px 10px; border-bottom: 1px solid #e2e8f0; font-size: 0.9rem; }
-        .tx-venta { color: #ef4444; font-weight: bold; } /* Rojo porque suma deuda */
-        .tx-pago { color: #10b981; font-weight: bold; } /* Verde porque resta deuda */
+        .tx-venta { color: #ef4444; font-weight: bold; } 
+        .tx-pago { color: #10b981; font-weight: bold; } 
 
-        .btn-pay { background: #0369a1; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; margin-top: 10px; transition: 0.2s; }
+        .btn-pay { background: #0369a1; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; margin-top: 10px; transition: 0.2s; display: inline-flex; align-items: center; gap: 8px;}
         .btn-pay:hover { background: #0284c7; }
+        
+        .btn-export { background: #f1f5f9; color: #0f172a; border: 1px solid #cbd5e1; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 5px;}
+        .btn-export:hover { background: #e2e8f0; }
 
         /* Estilos de Modal */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; }
@@ -41,39 +46,64 @@
 
     <main class="main-content">
         <div class="module-container">
-            
-            <a href="clientes.html" style="color: var(--primary); text-decoration: none; font-weight: bold; display: inline-block; margin-bottom: 15px;">← Volver al Directorio</a>
+            <header style="margin-bottom: 20px;">
+                <h2>Cuentas Corrientes y Cobranzas</h2>
+                <p style="color: #64748b; margin-top: 5px;">Consulta los estados de cuenta, descarga reportes y registra pagos recibidos.</p>
+            </header>
 
-            <div class="cc-header">
-                <div class="cc-client-info">
-                    <h2 id="view-client-name">Cargando...</h2>
-                    <p id="view-client-tax">CUIT/RUT: -</p>
-                    <p id="view-client-node">Sede: -</p>
-                    <button class="btn-pay" onclick="openPaymentModal()">💸 Ingresar Pago / Abono</button>
+            <div class="cc-controls">
+                <div style="flex: 1; min-width: 300px;">
+                    <label style="display: block; font-size: 0.85rem; font-weight: bold; color: #475569; margin-bottom: 5px;">Seleccionar Cliente a Consultar:</label>
+                    <select id="client-search-select" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 1rem;">
+                        <option value="">Cargando directorio de clientes...</option>
+                    </select>
                 </div>
-                <div class="cc-balance-box">
-                    <p>Saldo Actual (Cuenta Corriente)</p>
-                    <h1 id="view-client-balance">$ 0.00</h1>
-                </div>
+                <button id="btn-export-all" class="btn-export" style="height: 40px; background: #10b981; color: white; border: none;">
+                    📊 Descargar Saldos Globales (Excel)
+                </button>
             </div>
 
-            <div style="background: white; border: 1px solid var(--border); border-radius: 8px; overflow: hidden;">
-                <table class="cc-table" style="width: 100%; border-collapse: collapse;">
-                    <thead>
-                        <tr>
-                            <th>Fecha</th>
-                            <th>Concepto</th>
-                            <th>Doc. Referencia</th>
-                            <th>Notas</th>
-                            <th style="text-align: right;">Cargo (Debe)</th>
-                            <th style="text-align: right;">Abono (Haber)</th>
-                            <th style="text-align: right; background: #f8fafc; border-left: 1px solid #e2e8f0;">Saldo Acumulado</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tx-tbody">
-                        <tr><td colspan="7" style="text-align: center; padding: 20px;">Buscando movimientos...</td></tr>
-                    </tbody>
-                </table>
+            <div id="empty-state" style="text-align: center; padding: 60px 20px; background: white; border: 1px dashed #cbd5e1; border-radius: 8px;">
+                <span style="font-size: 3rem;">🧾</span>
+                <p style="color: #64748b; font-size: 1.1rem; margin-top: 15px;">Selecciona un cliente en la barra superior para ver su estado de cuenta.</p>
+            </div>
+
+            <div id="account-workspace" style="display: none;">
+                <div class="cc-header">
+                    <div class="cc-client-info">
+                        <h2 id="view-client-name">Nombre del Cliente</h2>
+                        <p id="view-client-tax">CUIT/RUT: -</p>
+                        <p id="view-client-node" style="margin-bottom: 15px;">Sede: -</p>
+                        
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                            <button class="btn-pay" onclick="openPaymentModal()">💸 Registrar Pago</button>
+                            <button class="btn-export" onclick="exportStatementPDF()">📄 PDF Estado de Cuenta</button>
+                            <button class="btn-export" onclick="exportStatementExcel()">📊 CSV Detalle</button>
+                        </div>
+                    </div>
+                    <div class="cc-balance-box">
+                        <p>Saldo Actual (Cuenta Corriente)</p>
+                        <h1 id="view-client-balance">$ 0.00</h1>
+                    </div>
+                </div>
+
+                <div style="background: white; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; overflow-x: auto;">
+                    <table class="cc-table" style="width: 100%; border-collapse: collapse; min-width: 800px;">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Concepto</th>
+                                <th>Doc. Referencia</th>
+                                <th>Notas</th>
+                                <th style="text-align: right;">Cargo (Debe)</th>
+                                <th style="text-align: right;">Abono (Haber)</th>
+                                <th style="text-align: right; background: #f8fafc; border-left: 1px solid #e2e8f0;">Saldo Acumulado</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tx-tbody">
+                            </tbody>
+                    </table>
+                </div>
             </div>
 
         </div>
@@ -108,16 +138,35 @@
     </div>
 
     <script>
-        const urlParams = new URLSearchParams(window.location.search);
-        const clientId = urlParams.get('client_id');
+        let currentClientsList = [];
+        let currentTransactions = [];
+        let activeClientData = null;
 
-        document.addEventListener("DOMContentLoaded", () => {
-            if (!clientId) {
-                alert("No se especificó un cliente.");
-                window.location.href = 'clientes.html';
-                return;
+        document.addEventListener("DOMContentLoaded", async () => {
+            await loadClientDirectory();
+            
+            // ¿Venimos redirigidos desde el directorio de clientes con un ID en la URL?
+            const urlParams = new URLSearchParams(window.location.search);
+            const urlClientId = urlParams.get('client_id');
+            
+            if (urlClientId) {
+                const select = document.getElementById('client-search-select');
+                select.value = urlClientId;
+                if(select.value !== "") { // Si el ID existe en la lista
+                    loadAccount(urlClientId);
+                }
             }
-            loadAccount();
+
+            // Al cambiar de cliente en el menú desplegable
+            document.getElementById('client-search-select').addEventListener('change', (e) => {
+                const clientId = e.target.value;
+                if (clientId) {
+                    loadAccount(clientId);
+                } else {
+                    document.getElementById('empty-state').style.display = 'block';
+                    document.getElementById('account-workspace').style.display = 'none';
+                }
+            });
         });
 
         const getUserIdLocal = () => {
@@ -126,12 +175,42 @@
             try { return JSON.parse(atob(token)).id; } catch (e) { return null; }
         };
 
-        const loadAccount = async () => {
+        // 1. Cargar el desplegable de clientes y el botón Global
+        const loadClientDirectory = async () => {
+            const select = document.getElementById('client-search-select');
+            try {
+                const res = await fetch('/api/clients');
+                const result = await res.json();
+                
+                if (res.ok && result.data) {
+                    currentClientsList = result.data;
+                    select.innerHTML = '<option value="">🔍 Buscar y seleccionar un cliente...</option>';
+                    
+                    // Ordenar alfabéticamente para que sea más fácil buscar
+                    const sorted = currentClientsList.sort((a,b) => a.business_name.localeCompare(b.business_name));
+                    
+                    sorted.forEach(c => {
+                        select.innerHTML += `<option value="${c.id}">${c.business_name} (CUIT: ${c.tax_id})</option>`;
+                    });
+                }
+            } catch (error) {
+                select.innerHTML = '<option value="">Error de conexión</option>';
+            }
+        };
+
+        // 2. Cargar datos específicos del cliente seleccionado
+        const loadAccount = async (clientId) => {
+            document.getElementById('empty-state').style.display = 'none';
+            document.getElementById('account-workspace').style.display = 'block';
+            document.getElementById('tx-tbody').innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 20px;">Buscando movimientos...</td></tr>';
+
             try {
                 const res = await fetch(`/api/account?client_id=${clientId}`);
                 const result = await res.json();
                 
                 if (res.ok) {
+                    activeClientData = result.client;
+                    currentTransactions = result.transactions;
                     renderHeader(result.client, result.transactions);
                     renderLedger(result.transactions);
                 } else {
@@ -139,6 +218,7 @@
                 }
             } catch (error) {
                 console.error("Error cargando cuenta corriente.");
+                document.getElementById('tx-tbody').innerHTML = '<tr><td colspan="7" style="text-align: center; color: red;">Error de red al cargar movimientos.</td></tr>';
             }
         };
 
@@ -167,15 +247,14 @@
             }
 
             let html = '';
-            let runningBalance = 0; // Saldo acumulado línea por línea
+            let runningBalance = 0;
 
             transactions.forEach(tx => {
-                runningBalance += tx.amount; // Matématica: Venta suma (+), Pago resta (-)
+                runningBalance += tx.amount; 
                 
                 const date = new Date(tx.created_at).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' });
                 const isSale = tx.transaction_type === 'VENTA';
                 
-                // Formateo de las columnas de dinero
                 const cargo = isSale ? `$${tx.amount.toFixed(2)}` : '';
                 const abono = !isSale ? `$${Math.abs(tx.amount).toFixed(2)}` : '';
                 const formatBalance = runningBalance < 0 ? `-$${Math.abs(runningBalance).toFixed(2)}` : `$${runningBalance.toFixed(2)}`;
@@ -196,7 +275,125 @@
             tbody.innerHTML = html;
         };
 
-        // Lógica del Modal de Pagos
+        // ==========================================
+        // EXPORTACIONES A PDF Y EXCEL
+        // ==========================================
+
+        window.exportStatementExcel = () => {
+            if (!activeClientData || currentTransactions.length === 0) return alert("No hay datos para exportar.");
+            
+            let csv = `ESTADO DE CUENTA - ${activeClientData.business_name}\n`;
+            csv += `Fecha,Concepto,Doc Referencia,Notas,Cargo (USD),Abono (USD),Saldo Acumulado (USD)\n`;
+            
+            let runningBalance = 0;
+            currentTransactions.forEach(tx => {
+                runningBalance += tx.amount;
+                const date = new Date(tx.created_at).toLocaleDateString('es-ES');
+                const isSale = tx.transaction_type === 'VENTA';
+                const cargo = isSale ? tx.amount.toFixed(2) : '0.00';
+                const abono = !isSale ? Math.abs(tx.amount).toFixed(2) : '0.00';
+                const safeNotes = (tx.notes || '').replace(/,/g, ' '); // Evitar que comas rompan el CSV
+
+                csv += `${date},${tx.transaction_type},${tx.reference_doc || ''},${safeNotes},${cargo},${abono},${runningBalance.toFixed(2)}\n`;
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.setAttribute("download", `Estado_Cuenta_${activeClientData.business_name.replace(/ /g,'_')}.csv`);
+            document.body.appendChild(link); link.click(); document.body.removeChild(link);
+        };
+
+        window.exportStatementPDF = () => {
+            if (!activeClientData) return;
+            const printWindow = window.open('', '_blank');
+            const today = new Date().toLocaleDateString('es-ES');
+            
+            let rowsHtml = '';
+            let runningBalance = 0;
+            
+            currentTransactions.forEach(tx => {
+                runningBalance += tx.amount;
+                const date = new Date(tx.created_at).toLocaleDateString('es-ES');
+                const isSale = tx.transaction_type === 'VENTA';
+                const cargo = isSale ? `$${tx.amount.toFixed(2)}` : '';
+                const abono = !isSale ? `$${Math.abs(tx.amount).toFixed(2)}` : '';
+                
+                rowsHtml += `
+                    <tr>
+                        <td style="padding:8px; border-bottom:1px solid #eee;">${date}</td>
+                        <td style="padding:8px; border-bottom:1px solid #eee;"><strong>${tx.transaction_type}</strong></td>
+                        <td style="padding:8px; border-bottom:1px solid #eee;">${tx.reference_doc || '-'}</td>
+                        <td style="padding:8px; border-bottom:1px solid #eee; text-align:right; color:#ef4444;">${cargo}</td>
+                        <td style="padding:8px; border-bottom:1px solid #eee; text-align:right; color:#10b981;">${abono}</td>
+                        <td style="padding:8px; border-bottom:1px solid #eee; text-align:right; font-weight:bold; background:#f8fafc;">$${runningBalance.toFixed(2)}</td>
+                    </tr>`;
+            });
+
+            const finalBalanceText = runningBalance > 0 ? `SALDO DEUDOR: $${runningBalance.toFixed(2)}` : (runningBalance < 0 ? `SALDO A FAVOR: $${Math.abs(runningBalance).toFixed(2)}` : 'SALDO: $0.00');
+
+            printWindow.document.write(`
+                <html>
+                <head>
+                    <title>Estado de Cuenta - ${activeClientData.business_name}</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; padding: 40px; color: #333; }
+                        .header { border-bottom: 2px solid #0f172a; padding-bottom: 20px; margin-bottom: 30px; display:flex; justify-content: space-between;}
+                        .info-box { background: #f8fafc; padding: 15px; border-radius: 6px; margin-bottom: 30px; border: 1px solid #e2e8f0; font-size:14px; }
+                        table { width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size:13px; }
+                        th { background: #0f172a; color: white; padding: 10px; text-align: left; }
+                    </style>
+                </head>
+                <body>
+                    <div class="header">
+                        <div><h1 style="margin:0; color:#0f172a;">ESTADO DE CUENTA</h1><p style="margin:5px 0 0 0; color:#64748b;">VIGGO WMS</p></div>
+                        <div style="text-align:right;"><p style="margin:5px 0 0 0;">Fecha Emisión: ${today}</p></div>
+                    </div>
+                    <div class="info-box">
+                        <strong>Cliente:</strong> ${activeClientData.business_name}<br>
+                        <strong>CUIT/RUT:</strong> ${activeClientData.tax_id}<br>
+                        <strong>Sede Operativa:</strong> ${activeClientData.node_name}
+                    </div>
+                    <table>
+                        <thead><tr><th>Fecha</th><th>Concepto</th><th>Referencia</th><th style="text-align:right;">Cargo</th><th style="text-align:right;">Abono</th><th style="text-align:right;">Saldo</th></tr></thead>
+                        <tbody>${rowsHtml}</tbody>
+                        <tfoot>
+                            <tr><td colspan="6" style="text-align:right; font-size:16px; padding-top:20px;"><strong>${finalBalanceText}</strong></td></tr>
+                        </tfoot>
+                    </table>
+                </body>
+                </html>
+            `);
+            printWindow.document.close();
+            setTimeout(() => { printWindow.print(); }, 500);
+        };
+
+        // Exportar Deuda de TODOS los clientes (Global)
+        document.getElementById('btn-export-all').addEventListener('click', () => {
+            if (currentClientsList.length === 0) return alert("No hay clientes cargados.");
+            
+            let csv = "Directorio de Saldos Globales VIGGO WMS\n\n";
+            csv += "Cliente,CUIT/RUT,Sede,Estado,Saldo (USD)\n";
+            
+            currentClientsList.forEach(c => {
+                const saldo = parseFloat(c.current_balance) || 0;
+                let estado = 'AL DIA';
+                if (saldo > 0) estado = 'DEUDOR';
+                if (saldo < 0) estado = 'A FAVOR';
+                
+                csv += `"${c.business_name}","${c.tax_id}","${c.node_name}",${estado},${saldo.toFixed(2)}\n`;
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.setAttribute("download", `Saldos_Globales_Clientes.csv`);
+            document.body.appendChild(link); link.click(); document.body.removeChild(link);
+        });
+
+        // ==========================================
+        // LÓGICA DEL MODAL DE PAGOS
+        // ==========================================
         const modal = document.getElementById('payment-modal');
         window.openPaymentModal = () => { modal.style.display = 'flex'; };
         window.closePaymentModal = () => { modal.style.display = 'none'; document.getElementById('payment-form').reset(); document.getElementById('pay-status').innerText = ''; };
@@ -206,6 +403,8 @@
             const btn = document.getElementById('btn-submit-pay');
             const status = document.getElementById('pay-status');
             
+            const clientId = document.getElementById('client-search-select').value;
+
             const payload = {
                 clientId: clientId,
                 amount: document.getElementById('pay-amount').value,
@@ -230,7 +429,7 @@
                     status.innerHTML = `<span style="color: green;">✅ ${result.message}</span>`;
                     setTimeout(() => {
                         closePaymentModal();
-                        loadAccount(); // Recargar la página con los nuevos saldos
+                        loadAccount(clientId); // Recargar los nuevos saldos
                     }, 1500);
                 } else {
                     status.innerHTML = `<span style="color: red;">❌ ${result.error}</span>`;
