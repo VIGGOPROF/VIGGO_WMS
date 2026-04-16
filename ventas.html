@@ -135,10 +135,212 @@
         let priceList = new Map(); 
         let cart = []; 
 
-        // --- MOTOR DE ARRANQUE LIMPIO ---
         document.addEventListener("DOMContentLoaded", () => {
             loadClients();
-        });
+
+            // Todo el código de botones y eventos lo metemos aquí adentro
+            // para que nazca seguro y no choque con script.js
+            
+            document.getElementById('pos-client-select').addEventListener('change', async (e) => {
+                const clientId = e.target.value;
+                const card = document.getElementById('client-card');
+                const cargaBox = document.getElementById('carga-box');
+                
+                if (cart.length > 0 && clientId !== previousClientId) {
+                    const conf = confirm("⚠️ Tienes artículos en el pedido actual.\n\nSi cambias de cliente, se borrará el carrito para aplicar la lista de precios del nuevo país.\n\n¿Deseas continuar y borrar el pedido?");
+                    if (!conf) {
+                        e.target.value = previousClientId;
+                        return; 
+                    } else {
+                        cart = [];
+                        updateCartUI();
+                    }
+                }
+
+                if (!clientId) {
+                    card.style.display = 'none';
+                    cargaBox.style.opacity = '0.5';
+                    cargaBox.style.pointerEvents = 'none';
+                    currentClient = null;
+                    previousClientId = '';
+                    return;
+                }
+
+                previousClientId = clientId;
+                currentClient = clientsList.find(c => c.id.toString() === clientId);
+                document.getElementById('cc-name').innerHTML = `<strong>Razón Social:</strong> ${currentClient.business_name}`;
+                document.getElementById('cc-tax').innerHTML = `<strong>Identificación:</strong> ${currentClient.tax_id}`;
+                document.getElementById('cc-node').innerHTML = `📍 Lista de Precios Activa: ${currentClient.node_name}`;
+                card.style.display = 'block';
+
+                document.getElementById('cc-node').innerHTML += ` ⏳ Cargando...`;
+                try {
+                    const res = await fetch(`/api/prices?node=${currentClient.node_id}`);
+                    const result = await res.json();
+                    if (res.ok && result.data) {
+                        priceList.clear();
+                        result.data.forEach(p => {
+                            priceList.set(p.sku.toUpperCase(), { sku: p.sku, name: p.name, price: p.price, stock: p.stock });
+                        });
+                        document.getElementById('cc-node').innerHTML = `📍 Lista de Precios Activa: ${currentClient.node_name} ✅`;
+                        cargaBox.style.opacity = '1';
+                        cargaBox.style.pointerEvents = 'auto';
+                        document.getElementById('pos-search').focus();
+                    }
+                } catch (err) { alert("Error al cargar la lista de precios."); }
+            });
+
+            // --------------------------------------------------------
+            // LÓGICA DEL BUSCADOR INTELIGENTE (VARIABLES RENOMBRADAS)
+            // --------------------------------------------------------
+            const posSearchInput = document.getElementById('pos-search');
+            const posResultsDiv = document.getElementById('autocomplete-results');
+
+            posSearchInput.addEventListener('input', (e) => {
+                const val = e.target.value.toLowerCase().trim();
+                if (!val) {
+                    posResultsDiv.style.display = 'none';
+                    return;
+                }
+                
+                const matches = Array.from(priceList.values()).filter(p => 
+                    p.sku.toLowerCase().includes(val) || 
+                    p.name.toLowerCase().includes(val)
+                );
+                
+                if (matches.length === 0) {
+                    posResultsDiv.innerHTML = '<div style="padding: 15px; text-align:center; color:#64748b;">No hay coincidencias</div>';
+                } else {
+                    let html = '';
+                    matches.slice(0, 15).forEach(m => {
+                        const stockClass = m.stock > 0 ? 'ac-stock' : 'ac-stock ac-stock-zero';
+                        html += `
+                            <div class="ac-item" onclick="selectProduct('${m.sku}')">
+                                <div>
+                                    <div class="ac-name">${m.name}</div>
+                                    <div class="ac-sku">SKU: ${m.sku}</div>
+                                </div>
+                                <div style="text-align: right;">
+                                    <span class="${stockClass}" title="Stock Físico Disponible">${m.stock}</span>
+                                    <div class="ac-price">$${m.price.toFixed(2)}</div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    posResultsDiv.innerHTML = html;
+                }
+                posResultsDiv.style.display = 'block';
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('.autocomplete-wrapper')) {
+                    posResultsDiv.style.display = 'none';
+                }
+            });
+
+            window.selectProduct = (sku) => {
+                const prod = priceList.get(sku);
+                document.getElementById('pos-sku-selected').value = sku;
+                posSearchInput.value = prod.name;
+                posResultsDiv.style.display = 'none';
+                
+                const qtyInput = document.getElementById('pos-qty');
+                qtyInput.focus();
+                qtyInput.select();
+            };
+
+            document.getElementById('pos-qty').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    document.getElementById('btn-add-item').click();
+                }
+            });
+
+            document.getElementById('btn-add-item').addEventListener('click', () => {
+                const skuInput = document.getElementById('pos-sku-selected');
+                const qtyInput = document.getElementById('pos-qty');
+                
+                if(!skuInput.value) {
+                    alert("Busca y selecciona un producto primero.");
+                    posSearchInput.focus();
+                    return;
+                }
+
+                addItemToCart(skuInput.value, qtyInput.value);
+                
+                skuInput.value = '';
+                posSearchInput.value = '';
+                qtyInput.value = '1';
+                posSearchInput.focus();
+                updateCartUI();
+            });
+
+            document.getElementById('btn-upload-excel').addEventListener('click', () => {
+                const fileInput = document.getElementById('pos-excel');
+                if (!fileInput.files.length) return alert('Selecciona un archivo Excel.');
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const json = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+                    
+                    json.forEach(row => {
+                        let sku = '', qty = 0;
+                        for (const key in row) {
+                            if (key.trim().toLowerCase() === 'sku') sku = row[key].toString();
+                            if (key.trim().toLowerCase() === 'cantidad') qty = row[key];
+                        }
+                        if (sku && qty) addItemToCart(sku, qty);
+                    });
+                    
+                    fileInput.value = '';
+                    updateCartUI();
+                };
+                reader.readAsArrayBuffer(fileInput.files[0]);
+            });
+
+            document.getElementById('btn-confirm-sale').addEventListener('click', async () => {
+                const btn = document.getElementById('btn-confirm-sale');
+                const status = document.getElementById('sale-status');
+                
+                if (cart.length === 0 || !currentClient) return;
+
+                btn.disabled = true;
+                btn.innerText = '⏳ Facturando y descontando stock...';
+
+                const payload = {
+                    clientId: currentClient.id,
+                    items: cart.map(i => ({ sku: i.sku, qty: i.qty })),
+                    userId: getUserIdLocal()
+                };
+
+                try {
+                    const res = await fetch('/api/sales', {
+                        method: 'POST',
+                        body: JSON.stringify(payload),
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                    
+                    const result = await res.json();
+                    
+                    if (res.ok) {
+                        status.innerHTML = `<span style="color: green;">✅ ${result.message}</span>`;
+                        generateRemitoPDF(currentClient, result.docRef, result.items, result.total);
+                        cart = [];
+                        updateCartUI();
+                    } else {
+                        status.innerHTML = `<span style="color: red;">❌ ${result.error}</span>`;
+                    }
+                } catch (err) {
+                    status.innerHTML = `<span style="color: red;">❌ Error de conexión.</span>`;
+                } finally {
+                    btn.innerText = 'Confirmar Venta';
+                    setTimeout(() => { status.innerHTML = ''; }, 5000);
+                }
+            });
+
+        }); // FIN DEL DOMContentLoaded
 
         const getUserIdLocal = () => {
             const token = localStorage.getItem('viggo_auth_token');
@@ -160,128 +362,6 @@
                 }
             } catch (error) { console.error("Error", error); }
         };
-
-        document.getElementById('pos-client-select').addEventListener('change', async (e) => {
-            const clientId = e.target.value;
-            const card = document.getElementById('client-card');
-            const cargaBox = document.getElementById('carga-box');
-            
-            if (cart.length > 0 && clientId !== previousClientId) {
-                const conf = confirm("⚠️ Tienes artículos en el pedido actual.\n\nSi cambias de cliente, se borrará el carrito para aplicar la lista de precios del nuevo país.\n\n¿Deseas continuar y borrar el pedido?");
-                if (!conf) {
-                    e.target.value = previousClientId;
-                    return; 
-                } else {
-                    cart = [];
-                    updateCartUI();
-                }
-            }
-
-            if (!clientId) {
-                card.style.display = 'none';
-                cargaBox.style.opacity = '0.5';
-                cargaBox.style.pointerEvents = 'none';
-                currentClient = null;
-                previousClientId = '';
-                return;
-            }
-
-            previousClientId = clientId;
-            currentClient = clientsList.find(c => c.id.toString() === clientId);
-            document.getElementById('cc-name').innerHTML = `<strong>Razón Social:</strong> ${currentClient.business_name}`;
-            document.getElementById('cc-tax').innerHTML = `<strong>Identificación:</strong> ${currentClient.tax_id}`;
-            document.getElementById('cc-node').innerHTML = `📍 Lista de Precios Activa: ${currentClient.node_name}`;
-            card.style.display = 'block';
-
-            document.getElementById('cc-node').innerHTML += ` ⏳ Cargando...`;
-            try {
-                const res = await fetch(`/api/prices?node=${currentClient.node_id}`);
-                const result = await res.json();
-                if (res.ok && result.data) {
-                    priceList.clear();
-                    result.data.forEach(p => {
-                        priceList.set(p.sku.toUpperCase(), { sku: p.sku, name: p.name, price: p.price, stock: p.stock });
-                    });
-                    document.getElementById('cc-node').innerHTML = `📍 Lista de Precios Activa: ${currentClient.node_name} ✅`;
-                    cargaBox.style.opacity = '1';
-                    cargaBox.style.pointerEvents = 'auto';
-                    document.getElementById('pos-search').focus();
-                }
-            } catch (err) { alert("Error al cargar la lista de precios."); }
-        });
-
-        // --------------------------------------------------------
-        // LÓGICA DEL BUSCADOR INTELIGENTE
-        // --------------------------------------------------------
-        const searchInput = document.getElementById('pos-search');
-        const resultsDiv = document.getElementById('autocomplete-results');
-
-        searchInput.addEventListener('input', (e) => {
-            const val = e.target.value.toLowerCase().trim();
-            if (!val) {
-                resultsDiv.style.display = 'none';
-                return;
-            }
-            
-            // Buscar coincidencias en el mapa
-            const matches = Array.from(priceList.values()).filter(p => 
-                p.sku.toLowerCase().includes(val) || 
-                p.name.toLowerCase().includes(val)
-            );
-            
-            if (matches.length === 0) {
-                resultsDiv.innerHTML = '<div style="padding: 15px; text-align:center; color:#64748b;">No hay coincidencias</div>';
-            } else {
-                let html = '';
-                // Mostrar los mejores 15 resultados
-                matches.slice(0, 15).forEach(m => {
-                    const stockClass = m.stock > 0 ? 'ac-stock' : 'ac-stock ac-stock-zero';
-                    html += `
-                        <div class="ac-item" onclick="selectProduct('${m.sku}')">
-                            <div>
-                                <div class="ac-name">${m.name}</div>
-                                <div class="ac-sku">SKU: ${m.sku}</div>
-                            </div>
-                            <div style="text-align: right;">
-                                <span class="${stockClass}" title="Stock Físico Disponible">${m.stock}</span>
-                                <div class="ac-price">$${m.price.toFixed(2)}</div>
-                            </div>
-                        </div>
-                    `;
-                });
-                resultsDiv.innerHTML = html;
-            }
-            resultsDiv.style.display = 'block';
-        });
-
-        // Al hacer clic afuera, se cierra el menú
-        document.addEventListener('click', (e) => {
-            if (!e.target.closest('.autocomplete-wrapper')) {
-                resultsDiv.style.display = 'none';
-            }
-        });
-
-        // Función que se ejecuta al elegir un producto de la lista
-        window.selectProduct = (sku) => {
-            const prod = priceList.get(sku);
-            document.getElementById('pos-sku-selected').value = sku;
-            document.getElementById('pos-search').value = prod.name; // Pone el nombre bonito en el buscador
-            resultsDiv.style.display = 'none';
-            
-            // Foco a la cantidad y seleccionar el "1" para que lo puedan pisar rápido
-            const qtyInput = document.getElementById('pos-qty');
-            qtyInput.focus();
-            qtyInput.select();
-        };
-
-        // ATAJO: Si presionan ENTER estando parados en "Cantidad", se agrega al carrito
-        document.getElementById('pos-qty').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                document.getElementById('btn-add-item').click();
-            }
-        });
-        // --------------------------------------------------------
 
         const updateCartUI = () => {
             const tbody = document.getElementById('cart-tbody');
@@ -355,91 +435,6 @@
             }
         };
 
-        document.getElementById('btn-add-item').addEventListener('click', () => {
-            const skuInput = document.getElementById('pos-sku-selected');
-            const qtyInput = document.getElementById('pos-qty');
-            
-            if(!skuInput.value) {
-                alert("Busca y selecciona un producto primero.");
-                document.getElementById('pos-search').focus();
-                return;
-            }
-
-            addItemToCart(skuInput.value, qtyInput.value);
-            
-            // Resetear para el siguiente
-            skuInput.value = '';
-            document.getElementById('pos-search').value = '';
-            qtyInput.value = '1';
-            document.getElementById('pos-search').focus();
-            updateCartUI();
-        });
-
-        document.getElementById('btn-upload-excel').addEventListener('click', () => {
-            const fileInput = document.getElementById('pos-excel');
-            if (!fileInput.files.length) return alert('Selecciona un archivo Excel.');
-
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const data = new Uint8Array(e.target.result);
-                const workbook = XLSX.read(data, { type: 'array' });
-                const json = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
-                
-                json.forEach(row => {
-                    let sku = '', qty = 0;
-                    for (const key in row) {
-                        if (key.trim().toLowerCase() === 'sku') sku = row[key].toString();
-                        if (key.trim().toLowerCase() === 'cantidad') qty = row[key];
-                    }
-                    if (sku && qty) addItemToCart(sku, qty);
-                });
-                
-                fileInput.value = '';
-                updateCartUI();
-            };
-            reader.readAsArrayBuffer(fileInput.files[0]);
-        });
-
-        document.getElementById('btn-confirm-sale').addEventListener('click', async () => {
-            const btn = document.getElementById('btn-confirm-sale');
-            const status = document.getElementById('sale-status');
-            
-            if (cart.length === 0 || !currentClient) return;
-
-            btn.disabled = true;
-            btn.innerText = '⏳ Facturando y descontando stock...';
-
-            const payload = {
-                clientId: currentClient.id,
-                items: cart.map(i => ({ sku: i.sku, qty: i.qty })),
-                userId: getUserIdLocal()
-            };
-
-            try {
-                const res = await fetch('/api/sales', {
-                    method: 'POST',
-                    body: JSON.stringify(payload),
-                    headers: { 'Content-Type': 'application/json' }
-                });
-                
-                const result = await res.json();
-                
-                if (res.ok) {
-                    status.innerHTML = `<span style="color: green;">✅ ${result.message}</span>`;
-                    generateRemitoPDF(currentClient, result.docRef, result.items, result.total);
-                    cart = [];
-                    updateCartUI();
-                } else {
-                    status.innerHTML = `<span style="color: red;">❌ ${result.error}</span>`;
-                }
-            } catch (err) {
-                status.innerHTML = `<span style="color: red;">❌ Error de conexión.</span>`;
-            } finally {
-                btn.innerText = 'Confirmar Venta';
-                setTimeout(() => { status.innerHTML = ''; }, 5000);
-            }
-        });
-
         const generateRemitoPDF = (client, docRef, items, total) => {
             const printWindow = window.open('', '_blank');
             const date = new Date().toLocaleDateString('es-ES');
@@ -501,6 +496,5 @@
     </script>
     
     <script src="script.js"></script>
-    
 </body>
 </html>
