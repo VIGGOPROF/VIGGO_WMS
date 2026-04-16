@@ -26,26 +26,7 @@ export async function onRequestPost(context) {
   }
 }
 
-// 3. ACTUALIZAR DEPÓSITO (PUT)
-export async function onRequestPut(context) {
-  try {
-    const body = await context.request.json();
-    const id = body.id;
-    const name = String(body.name || "").trim();
-    const order = parseInt(body.display_order || body.order || 999);
-
-    if (!id || !name) {
-      return new Response(JSON.stringify({ error: "Faltan datos." }), { status: 400, headers: { "Content-Type": "application/json" } });
-    }
-
-    await context.env.DB.prepare("UPDATE nodes SET name = ?, display_order = ? WHERE id = ?").bind(name, order, id).run();
-    return new Response(JSON.stringify({ status: "success" }), { status: 200, headers: { "Content-Type": "application/json" } });
-  } catch (error) {
-    return new Response(JSON.stringify({ error: "Error PUT: " + error.message }), { status: 500, headers: { "Content-Type": "application/json" } });
-  }
-}
-
-// 4. ELIMINAR DEPÓSITO (DELETE)
+// 3. ELIMINAR DEPÓSITO (DELETE)
 export async function onRequestDelete(context) {
   try {
     const url = new URL(context.request.url);
@@ -55,7 +36,7 @@ export async function onRequestDelete(context) {
       return new Response(JSON.stringify({ error: "Falta ID." }), { status: 400, headers: { "Content-Type": "application/json" } });
     }
 
-    // Verificar si hay stock antes de borrar
+    // Verificar si hay stock antes de borrar usando las columnas correctas
     const checkStock = await context.env.DB.prepare("SELECT SUM(physical_stock + transit_stock) as qty FROM inventory WHERE node_id = ?").bind(id).first();
     
     if (checkStock && checkStock.qty > 0) {
