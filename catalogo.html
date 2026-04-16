@@ -21,8 +21,6 @@
         .upload-area:hover { border-color: var(--accent); background: #eff6ff; }
         .upload-icon { font-size: 2rem; display: block; margin-bottom: 10px; }
         .stats-badge { background: white; border: 1px solid var(--border); padding: 8px 12px; border-radius: 6px; font-size: 0.8rem; font-weight: bold; display: flex; justify-content: space-between; }
-        
-        /* Caja de instrucciones Excel */
         .excel-legend { background: #f0fdf4; border-left: 4px solid #10b981; padding: 12px; border-radius: 0 6px 6px 0; font-size: 0.8rem; color: #064e3b; margin-top: -5px;}
         .excel-legend code { background: white; padding: 2px 6px; border-radius: 4px; border: 1px solid #a7f3d0; font-weight: bold; color: #047857;}
     </style>
@@ -32,7 +30,7 @@
 </head>
 <body>
 
-    <div id="sidebar-container"></div>
+    <aside class="sidebar" id="sidebar-container"></aside>
 
     <main class="main-content">
         <div class="module-container">
@@ -58,7 +56,10 @@
                     <h3><span>🏢</span> Depósitos / Nodos</h3>
                     <div style="display: flex; flex-direction: column; gap: 8px;">
                         <input type="text" id="node-name-input-cat" placeholder="Nombre (ej: Chile Filial)">
-                        <input type="number" id="node-order-input-cat" placeholder="Prioridad (1, 2, 3...)">
+                        <div style="display: flex; gap: 8px;">
+                            <input type="number" id="node-order-input-cat" placeholder="Prioridad" style="flex: 1;">
+                            <input type="text" id="node-country-input-cat" placeholder="País (AR, CN...)" style="flex: 1;" maxlength="2">
+                        </div>
                         <button id="add-node-btn-cat" style="width: 100%;">Registrar Depósito</button>
                     </div>
                     <div class="item-list" id="node-list-cat">
@@ -118,7 +119,7 @@
             loadCatNodes();
         });
 
-        // --- LÓGICAS BÁSICAS ---
+        // --- FÁBRICAS ---
         const loadCatFactories = async () => {
             const list = document.getElementById('factory-list-cat');
             try {
@@ -128,48 +129,80 @@
             } catch (e) { list.innerHTML = '<p style="padding:10px; color:red;">Error.</p>'; }
         };
 
+        // --- NODOS (AHORA MUESTRA Y GESTIONA EL PAÍS) ---
         const loadCatNodes = async () => {
             const list = document.getElementById('node-list-cat');
             try {
                 const res = await fetch('/api/nodes');
                 const result = await res.json();
-                if (res.ok && result.data) list.innerHTML = result.data.map(n => `<div class="list-entry"><span><strong>[${n.display_order}]</strong> ${n.name}</span><div class="actions"><button class="action-btn delete" onclick="deleteCatNode(${n.id})">🗑️</button></div></div>`).join('');
+                if (res.ok && result.data) {
+                    list.innerHTML = result.data.map(n => `
+                        <div class="list-entry">
+                            <span><strong>[${n.display_order}]</strong> ${n.name} <span style="font-size: 0.75rem; color: #64748b; background: #e2e8f0; padding: 2px 6px; border-radius: 4px; margin-left: 5px;">${n.country_code || 'AR'}</span></span>
+                            <div class="actions">
+                                <button class="action-btn" onclick="editCatNode(${n.id}, '${n.name}', ${n.display_order}, '${n.country_code || 'AR'}')">✏️</button>
+                                <button class="action-btn delete" onclick="deleteCatNode(${n.id})">🗑️</button>
+                            </div>
+                        </div>`).join('');
+                }
             } catch (e) { list.innerHTML = '<p style="padding:10px; color:red;">Error al cargar nodos.</p>'; }
         };
 
-        // --- CREAR DEPÓSITO (CON ESCUDO ANTI-500) ---
+        // CREAR DEPÓSITO CON PAÍS
         document.getElementById('add-node-btn-cat').addEventListener('click', async () => {
             const nameInput = document.getElementById('node-name-input-cat');
             const orderInput = document.getElementById('node-order-input-cat');
+            const countryInput = document.getElementById('node-country-input-cat');
+            
             const name = nameInput.value;
             const orderRaw = orderInput.value;
+            const country = countryInput.value || 'AR'; // Si lo dejas vacío, asume Argentina
+            
             if (!name) return;
             
             try {
                 const res = await fetch('/api/nodes', { 
                     method: 'POST', 
-                    body: JSON.stringify({ name: name, display_order: parseInt(orderRaw) || 999 }), 
+                    body: JSON.stringify({ name: name, display_order: parseInt(orderRaw) || 999, country_code: country }), 
                     headers: {'Content-Type': 'application/json'} 
                 });
                 
-                const textResponse = await res.text(); // Leemos como texto primero para atrapar errores nativos
-                
+                const textResponse = await res.text();
                 try {
                     const data = JSON.parse(textResponse);
-                    if (!res.ok) alert("❌ ERROR DE BASE DE DATOS:\n\n" + (data.error || "Error desconocido"));
+                    if (!res.ok) alert("❌ ERROR:\n\n" + (data.error || "Error desconocido"));
                     else {
                         nameInput.value = '';
                         orderInput.value = '';
+                        countryInput.value = '';
                         loadCatNodes();
                     }
-                } catch(parseError) {
-                    // Si llega aquí, significa que Cloudflare escupió un HTML crudo de Error 500
-                    alert("❌ ERROR FATAL DEL SERVIDOR (Crash 500):\n\nEl servidor colapsó y no devolvió JSON. Posibles causas:\n1. Columna faltante en la base de datos.\n2. Error de sintaxis en el archivo backend.\n\nRespuesta cruda: " + textResponse.substring(0, 200) + "...");
+                } catch(e) {
+                    alert("❌ ERROR FATAL (Crash 500):\n\n" + textResponse.substring(0, 200));
                 }
             } catch (e) {
                 alert("❌ ERROR GRAVE DE RED:\n\n" + e.message);
             }
         });
+
+        // EDITAR DEPÓSITO (Pide Nombre, Prioridad y País en secuencia)
+        window.editCatNode = async (id, oldName, oldOrder, oldCountry) => {
+            const name = prompt("1. Nombre del depósito:", oldName);
+            if (!name) return;
+            
+            const orderRaw = prompt("2. Prioridad de visualización:", oldOrder);
+            if (!orderRaw) return;
+            
+            const country = prompt("3. Código de país (2 letras, ej: AR, CL, PY, CN):", oldCountry);
+            if (!country) return;
+
+            await fetch('/api/nodes', { 
+                method: 'PUT', 
+                body: JSON.stringify({ id: id, name: name, display_order: parseInt(orderRaw) || 99, country_code: country }), 
+                headers: {'Content-Type': 'application/json'} 
+            });
+            loadCatNodes();
+        };
 
         window.deleteCatNode = async (id) => {
             if (confirm("¿Eliminar este depósito?")) {
@@ -178,7 +211,7 @@
             }
         };
 
-        // --- SINCRONIZADOR MEJORADO Y SIMPLIFICADO ---
+        // --- SINCRONIZADOR ---
         document.getElementById('sync-stock-file').addEventListener('change', (e) => {
             if (e.target.files.length > 0) processSyncStock(e.target.files[0]);
         });
@@ -198,7 +231,6 @@
 
                 let headerIdx = -1, skuCol = -1, prodCol = -1, stockCol = -1;
 
-                // Radar Simplificado: Solo busca Código, Producto y Stock en las primeras 15 filas
                 for (let i = 0; i < Math.min(15, rows.length); i++) {
                     const row = rows[i] || [];
                     for (let j = 0; j < row.length; j++) {
