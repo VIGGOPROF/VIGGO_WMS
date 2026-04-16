@@ -3,21 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Inventario Global | Viiggo WMS</title>
+    <title>Panorama Global | Viiggo WMS</title>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
     <link rel="stylesheet" href="style.css">
     <style>
-        .admin-card { background: #f8fafc; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-        .inventory-table { width: 100%; border-collapse: collapse; text-align: left; background: white; }
-        .inventory-table th { background: #f1f5f9; padding: 15px; font-size: 0.9rem; color: #475569; border-bottom: 2px solid var(--border); }
-        .inventory-table td { padding: 12px 15px; border-bottom: 1px solid var(--bg-app); font-size: 0.9rem; color: #334155; }
-        .inventory-table tr:hover td { background: #f8fafc; }
-        .cat-badge { background: #e2e8f0; color: #475569; padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; }
-        .stock-positive { color: #10b981; font-weight: bold; }
-        .stock-zero { color: #ef4444; font-weight: bold; }
+        .header-section { margin-bottom: 20px; }
+        .header-section h2 { font-size: 1.5rem; color: #0f172a; margin-bottom: 5px; }
+        .header-section p { color: #64748b; font-size: 0.9rem; }
         
-        .filter-container { margin-bottom: 20px; background: white; padding: 15px 20px; border-radius: 8px; border: 1px solid var(--border); display: inline-flex; align-items: center; gap: 10px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
-        .filter-container select { padding: 8px 12px; border-radius: 6px; border: 1px solid #cbd5e1; outline: none; min-width: 250px; font-size: 0.9rem; cursor: pointer; }
-        .filter-container select:focus { border-color: var(--primary); }
+        /* Barra de herramientas superior */
+        .toolbar { background: white; border: 1px solid var(--border); border-radius: 8px; padding: 15px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .toolbar-group { display: flex; align-items: center; gap: 10px; }
+        
+        .search-box { padding: 8px 12px; border-radius: 6px; border: 1px solid #cbd5e1; outline: none; width: 250px; font-size: 0.9rem; }
+        .category-select { padding: 8px 12px; border-radius: 6px; border: 1px solid #cbd5e1; outline: none; min-width: 180px; font-size: 0.9rem; cursor: pointer; }
+        
+        .btn-excel { background: #10b981; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 5px; font-size: 0.9rem; }
+        .btn-excel:hover { background: #059669; }
+        .btn-update { background: #0f172a; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 5px; font-size: 0.9rem; }
+        .btn-update:hover { background: #1e293b; }
+        
+        /* Tabla Matricial */
+        .matrix-container { background: white; border: 1px solid var(--border); border-radius: 8px; overflow-x: auto; box-shadow: 0 1px 3px rgba(0,0,0,0.05); max-height: 65vh; }
+        .matrix-table { width: 100%; border-collapse: collapse; text-align: right; white-space: nowrap; }
+        .matrix-table th { background: #f8fafc; padding: 12px 15px; font-size: 0.85rem; color: #334155; border-bottom: 2px solid var(--border); border-right: 1px solid var(--border); position: sticky; top: 0; z-index: 10; text-align: right; }
+        .matrix-table th.col-left { text-align: left; }
+        .matrix-table td { padding: 10px 15px; border-bottom: 1px solid var(--bg-app); border-right: 1px solid var(--border); font-size: 0.85rem; color: #334155; }
+        .matrix-table td.col-left { text-align: left; }
+        .matrix-table tr:hover td { background: #f1f5f9; }
+        
+        /* Celda con tránsito */
+        .cell-transit { background-color: #fef08a !important; font-weight: bold; }
+        .sku-bold { font-weight: bold; color: #0f172a; }
     </style>
 <script>
     if (!localStorage.getItem('viggo_auth_token')) window.location.href = 'login.html';
@@ -29,31 +46,40 @@
 
     <main class="main-content">
         <div class="module-container">
-            <header>
-                <h2>Inventario Global Consolidado</h2>
-                <p>Listado maestro de productos y stock total en todos los depósitos.</p>
-            </header>
-
-            <div class="filter-container">
-                <label for="category-dropdown" style="font-weight: 600; color: #334155;">Filtrar por Categoría:</label>
-                <select id="category-dropdown" onchange="applyCategoryFilter()">
-                    <option value="TODAS">Mostrando Todas las Categorías</option>
-                    </select>
+            
+            <div class="header-section">
+                <h2>Panorama Global de Inventario</h2>
+                <p>Vista matricial del stock físico y en tránsito. Las celdas amarillas indican mercadería en camino.</p>
             </div>
 
-            <div class="admin-card">
-                <table class="inventory-table">
-                    <thead>
+            <div class="toolbar">
+                <div class="toolbar-group">
+                    <input type="text" id="search-input" class="search-box" placeholder="🔍 Filtrar por SKU o nombre..." onkeyup="applyLocalFilters()">
+                    <select id="category-dropdown" class="category-select" onchange="loadMatrixData()">
+                        <option value="TODAS">Todas las Categorías</option>
+                    </select>
+                </div>
+                <div class="toolbar-group">
+                    <label style="display: flex; align-items: center; gap: 5px; font-size: 0.9rem; cursor: pointer; border: 1px solid #cbd5e1; padding: 7px 12px; border-radius: 6px;">
+                        <input type="checkbox" id="transit-toggle" onchange="applyLocalFilters()">
+                        🚚 Solo Tránsito
+                    </label>
+                    <button class="btn-excel" onclick="exportToExcel()">📊 Exportar a Excel</button>
+                    <button class="btn-update" onclick="loadMatrixData()">🔄 Actualizar</button>
+                </div>
+            </div>
+
+            <div class="matrix-container">
+                <table class="matrix-table" id="matrix-table">
+                    <thead id="matrix-head">
                         <tr>
-                            <th>SKU</th>
-                            <th>Producto</th>
-                            <th>Categoría</th>
-                            <th>Stock Total</th>
-                        </tr>
+                            <th class="col-left">SKU</th>
+                            <th class="col-left">Producto</th>
+                            </tr>
                     </thead>
-                    <tbody id="inventory-table-body">
+                    <tbody id="matrix-body">
                         <tr>
-                            <td colspan="4" style="text-align: center; padding: 30px; color: #64748b;">⏳ Cargando catálogo de inventario...</td>
+                            <td colspan="10" style="text-align: center; padding: 30px;">⏳ Cargando matriz...</td>
                         </tr>
                     </tbody>
                 </table>
@@ -63,61 +89,117 @@
     </main>
 
     <script>
+        let globalNodes = [];
+        let globalItems = [];
         let isDropdownLoaded = false;
 
-        // Función que llama a la API y dibuja la tabla
-        async function applyCategoryFilter() {
+        async function loadMatrixData() {
             const dropdown = document.getElementById('category-dropdown');
-            const tbody = document.getElementById('inventory-table-body');
             const selectedCategory = dropdown.value;
+            const tbody = document.getElementById('matrix-body');
+            const thead = document.getElementById('matrix-head');
             
-            tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 30px; color: #64748b;">⏳ Actualizando lista...</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; padding: 30px;">⏳ Actualizando matriz...</td></tr>';
 
             try {
-                // Llama al backend pasándole la categoría elegida
                 const res = await fetch(`/api/dashboard?category=${encodeURIComponent(selectedCategory)}`);
                 const data = await res.json();
 
                 if (data.success) {
-                    // 1. Llenar el desplegable solo la primera vez para no perder el foco
+                    globalNodes = data.nodes;
+                    globalItems = data.items;
+
+                    // 1. Cargar el desplegable de Categorías (solo la primera vez)
                     if (!isDropdownLoaded && data.categories) {
-                        let optionsHtml = '<option value="TODAS">Mostrando Todas las Categorías</option>';
-                        data.categories.forEach(cat => {
-                            optionsHtml += `<option value="${cat}">${cat}</option>`;
-                        });
+                        let optionsHtml = '<option value="TODAS">Todas las Categorías</option>';
+                        data.categories.forEach(cat => { optionsHtml += `<option value="${cat}">${cat}</option>`; });
                         dropdown.innerHTML = optionsHtml;
-                        dropdown.value = selectedCategory; 
+                        dropdown.value = selectedCategory;
                         isDropdownLoaded = true;
                     }
 
-                    // 2. Dibujar las filas de la tabla
-                    if (data.items && data.items.length > 0) {
-                        tbody.innerHTML = data.items.map(item => {
-                            const stockClass = item.total_stock > 0 ? 'stock-positive' : 'stock-zero';
-                            return `
-                                <tr>
-                                    <td><strong>${item.sku}</strong></td>
-                                    <td>${item.name}</td>
-                                    <td><span class="cat-badge">${item.category}</span></td>
-                                    <td class="${stockClass}">${item.total_stock || 0}</td>
-                                </tr>
-                            `;
-                        }).join('');
-                    } else {
-                        tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; padding: 30px; color: #ef4444;">No hay productos registrados en esta categoría.</td></tr>`;
-                    }
+                    // 2. Dibujar las Cabeceras de la Matriz (Depósitos)
+                    let headerHtml = `<tr><th class="col-left">SKU</th><th class="col-left">Producto</th>`;
+                    globalNodes.forEach(n => { headerHtml += `<th>${n.name}</th>`; });
+                    headerHtml += `</tr>`;
+                    thead.innerHTML = headerHtml;
+
+                    // 3. Dibujar las Filas
+                    renderTableRows(globalItems);
+
                 } else {
-                    tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; padding: 30px; color: #ef4444;">❌ Error del servidor: ${data.error}</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="10" style="text-align: center; color: red;">❌ Error: ${data.error}</td></tr>`;
                 }
             } catch (err) {
-                tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; padding: 30px; color: #ef4444;">❌ Error de conexión al cargar el inventario.</td></tr>`;
-                console.error(err);
+                tbody.innerHTML = `<tr><td colspan="10" style="text-align: center; color: red;">❌ Error de red al cargar la matriz.</td></tr>`;
             }
         }
 
-        // Ejecutar apenas cargue la página
+        // Dibuja las filas basándose en los datos pasados (útil para el buscador)
+        function renderTableRows(items) {
+            const tbody = document.getElementById('matrix-body');
+            
+            if (items.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="${globalNodes.length + 2}" style="text-align: center; padding: 30px;">No se encontraron productos.</td></tr>`;
+                return;
+            }
+
+            let rowsHtml = '';
+            items.forEach(item => {
+                let rowHtml = `<tr><td class="col-left sku-bold">${item.sku}</td><td class="col-left">${item.name}</td>`;
+                
+                // Iteramos sobre cada depósito para llenar la celda
+                globalNodes.forEach(node => {
+                    const stockData = item.stock[node.id] || { quantity: 0, transit: 0 };
+                    const cellClass = stockData.transit > 0 ? 'cell-transit' : '';
+                    
+                    // Si tiene tránsito, mostramos un tooltip al pasar el mouse
+                    const tooltip = stockData.transit > 0 ? `title="Físico: ${stockData.quantity} | En camino: ${stockData.transit}"` : '';
+                    
+                    rowHtml += `<td class="${cellClass}" ${tooltip}>${stockData.quantity}</td>`;
+                });
+                
+                rowHtml += `</tr>`;
+                rowsHtml += rowHtml;
+            });
+
+            tbody.innerHTML = rowsHtml;
+        }
+
+        // Filtro Local (Buscador rápido + Checkbox Tránsito)
+        function applyLocalFilters() {
+            const searchTerm = document.getElementById('search-input').value.toLowerCase();
+            const onlyTransit = document.getElementById('transit-toggle').checked;
+
+            const filteredItems = globalItems.filter(item => {
+                // 1. Filtro de texto (SKU o Nombre)
+                const matchText = item.sku.toLowerCase().includes(searchTerm) || item.name.toLowerCase().includes(searchTerm);
+                
+                // 2. Filtro de tránsito
+                let hasTransit = false;
+                if (onlyTransit) {
+                    for (const nodeId in item.stock) {
+                        if (item.stock[nodeId].transit > 0) hasTransit = true;
+                    }
+                } else {
+                    hasTransit = true; // Si el check está apagado, pasan todos
+                }
+
+                return matchText && hasTransit;
+            });
+
+            renderTableRows(filteredItems);
+        }
+
+        // Exportar la tabla visible a Excel
+        function exportToExcel() {
+            const table = document.getElementById("matrix-table");
+            const wb = XLSX.utils.table_to_book(table, { sheet: "Inventario" });
+            XLSX.writeFile(wb, `Inventario_Global_${new Date().toISOString().split('T')[0]}.xlsx`);
+        }
+
         document.addEventListener("DOMContentLoaded", () => {
-            applyCategoryFilter();
+            loadMatrixData();
         });
     </script>
     
