@@ -10,6 +10,40 @@
 <script>
     if (!localStorage.getItem('viggo_auth_token')) window.location.href = 'login.html';
 </script>
+
+<style>
+        /* Restaurar la barra de herramientas rota */
+        .toolbar { background: white; border: 1px solid var(--border); border-radius: 4px; padding: 8px 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+        .toolbar-group { display: flex; align-items: center; gap: 8px; flex: 1; }
+        .toolbar-actions { display: flex; align-items: center; gap: 8px; }
+
+        /* Buscador */
+        .search-box { padding: 4px 8px; border-radius: 4px; border: 1px solid #cbd5e1; outline: none; min-width: 200px; font-size: 0.75rem; }
+
+        /* Restaurar el Desplegable que explotó */
+        .custom-select { position: relative; min-width: 180px; font-size: 0.75rem; user-select: none; }
+        .select-btn { background: white; border: 1px solid #cbd5e1; padding: 4px 8px; border-radius: 4px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; color: #334155; height: 26px; }
+        .select-content { display: none; position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #cbd5e1; border-radius: 4px; margin-top: 2px; max-height: 250px; overflow-y: auto; z-index: 1000; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .select-content.show { display: block; }
+        .select-content label { display: flex; align-items: center; gap: 6px; padding: 4px 8px; cursor: pointer; border-bottom: 1px solid #f1f5f9; margin: 0; }
+        .select-content label:hover { background: #f8fafc; }
+
+        /* Botones */
+        .btn-excel, .btn-update { padding: 4px 10px; border-radius: 4px; border: none; cursor: pointer; font-weight: bold; color: white; display: flex; align-items: center; gap: 5px; font-size: 0.75rem; height: 26px; }
+        .btn-excel { background: #10b981; }
+        .btn-update { background: #0f172a; }
+
+        /* Matriz Súper Densa */
+        .matrix-container { overflow-x: auto; max-height: 75vh; border: 1px solid var(--border); border-radius: 4px; background: white; }
+        .matrix-table { width: 100%; border-collapse: collapse; text-align: right; white-space: nowrap; }
+        .matrix-table th { background: #f8fafc; padding: 4px 8px; font-size: 0.65rem; color: #334155; border-bottom: 2px solid var(--border); border-right: 1px solid var(--border); position: sticky; top: 0; z-index: 10; text-transform: uppercase; }
+        .matrix-table th.col-left { text-align: left; }
+        .matrix-table td { padding: 3px 8px; border-bottom: 1px solid var(--bg-app); border-right: 1px solid var(--border); font-size: 0.75rem; color: #334155; }
+        .matrix-table td.col-left { text-align: left; }
+        .cell-transit { background-color: #fef08a !important; font-weight: bold; }
+        .sku-bold { font-weight: bold; color: #0f172a; font-size: 0.7rem; }
+    </style>
+    
 </head>
 <body>
 
