@@ -138,56 +138,63 @@
 
     <script>
         let nodeChartInstance = null;
-        let categoryChartInstance = null; // Variable para el gráfico de categorías restaurada
+        let categoryChartInstance = null;
         let currentMrpData = [];
 
         // --- MOTOR DE ARRANQUE UNIFICADO ---
         document.addEventListener("DOMContentLoaded", async () => {
-            await loadNodes();
+            // Usamos la función renombrada para no chocar con script.js
+            await loadMrpNodes();
             loadReports();
             
             document.getElementById('global-node-filter').addEventListener('change', () => {
                 loadReports();
-                // Limpiar tabla MRP si cambian de región para evitar confusiones
                 document.getElementById('mrp-tbody').innerHTML = '<tr><td colspan="6" style="text-align: center; color: #64748b; padding: 20px;">Región modificada. Haz clic en "Calcular Sugerido" de nuevo.</td></tr>';
                 document.getElementById('btn-export-mrp').style.display = 'none';
             });
         });
 
-        // Inicialización de Nodos
-        const loadNodes = async () => {
+        // Función renombrada para evitar colisiones
+        const loadMrpNodes = async () => {
             const selectGlobal = document.getElementById('global-node-filter');
-            const res = await fetch('/api/nodes');
-            const result = await res.json();
-            if (res.ok) {
-                result.data.forEach(n => {
-                    selectGlobal.innerHTML += `<option value="${n.id}">${n.name}</option>`;
-                });
+            try {
+                const res = await fetch('/api/nodes');
+                const result = await res.json();
+                if (res.ok) {
+                    result.data.forEach(n => {
+                        selectGlobal.innerHTML += `<option value="${n.id}">${n.name}</option>`;
+                    });
+                }
+            } catch (e) {
+                console.error("Error cargando nodos en MRP");
             }
         };
 
         // Carga de BI y Alertas
         const loadReports = async () => {
             const nodeId = document.getElementById('global-node-filter').value;
-            const res = await fetch(`/api/reports?nodeId=${nodeId}`);
-            const result = await res.json();
-            
-            if (res.ok && result.data) {
-                renderCharts(result.data, nodeId !== "");
-                renderAlerts(result.data.alerts);
+            try {
+                const res = await fetch(`/api/reports?nodeId=${nodeId}`);
+                const result = await res.json();
+                
+                if (res.ok && result.data) {
+                    renderCharts(result.data, nodeId !== "");
+                    renderAlerts(result.data.alerts);
+                }
+            } catch (e) {
+                console.error("Error cargando reportes");
             }
         };
 
         const renderCharts = (data, isFiltered) => {
             const nodeCtx = document.getElementById('nodeChart').getContext('2d');
-            const categoryCtx = document.getElementById('categoryChart').getContext('2d'); // Contexto de categorías
+            const categoryCtx = document.getElementById('categoryChart').getContext('2d');
             
             document.getElementById('node-chart-title').innerText = isFiltered ? 'Volumen en Región' : 'Stock Físico por Depósito';
 
             if (nodeChartInstance) nodeChartInstance.destroy();
-            if (categoryChartInstance) categoryChartInstance.destroy(); // Destruir gráfico anterior si existe
+            if (categoryChartInstance) categoryChartInstance.destroy();
 
-            // 1. Gráfico de Barras (Nodos)
             nodeChartInstance = new Chart(nodeCtx, {
                 type: 'bar',
                 data: {
@@ -197,7 +204,6 @@
                 options: { responsive: true, scales: { y: { beginAtZero: true } }, plugins: { legend: { display: false } } }
             });
 
-            // 2. Gráfico de Torta (Categorías) Restaurado
             categoryChartInstance = new Chart(categoryCtx, {
                 type: 'doughnut',
                 data: {
@@ -237,7 +243,6 @@
         // LÓGICA DE APROVISIONAMIENTO (MRP)
         // ==========================================
         
-        // Selector automático Avión vs Barco
         const transportSelect = document.getElementById('mrp-transport');
         const leadTimeInput = document.getElementById('mrp-lead-time');
         
@@ -247,10 +252,9 @@
             } else {
                 leadTimeInput.value = 60;
             }
-            if(currentMrpData.length > 0) renderMrpTable(); // Recalcula al instante
+            if(currentMrpData.length > 0) renderMrpTable();
         });
 
-        // Recalcular al cambiar días o meses
         leadTimeInput.addEventListener('input', () => { if(currentMrpData.length > 0) renderMrpTable(); });
         document.getElementById('mrp-safety-stock').addEventListener('input', () => { if(currentMrpData.length > 0) renderMrpTable(); });
 
@@ -282,7 +286,7 @@
             const tbody = document.getElementById('mrp-tbody');
             
             const leadTimeMonths = leadTimeDays / 30;
-            const targetMonths = leadTimeMonths + safetyMonths; // Lo que necesito cubrir
+            const targetMonths = leadTimeMonths + safetyMonths;
             
             let html = '';
 
@@ -291,10 +295,8 @@
                 const vpm = item.avg_monthly_sales;
                 const coverage = totalStock / vpm;
                 
-                // Fórmula de compra automática:
                 const needed = Math.max(0, Math.ceil((targetMonths * vpm) - totalStock));
                 
-                // Si la cobertura actual no alcanza ni para el viaje de la mercadería, estamos en quiebre técnico
                 const isCritical = coverage <= leadTimeMonths;
                 const rowClass = isCritical ? 'row-critical' : '';
 
