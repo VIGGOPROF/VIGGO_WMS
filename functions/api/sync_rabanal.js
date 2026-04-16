@@ -36,11 +36,12 @@ export async function onRequestPost(context) {
         productId = product.id;
       }
 
-      const inv = await db.prepare("SELECT id FROM inventory WHERE product_id = ? AND node_id = ?").bind(productId, realNodeId).first();
+      // CORRECCIÓN 1: No buscamos la columna "id", solo comprobamos si existe la fila
+      const inv = await db.prepare("SELECT product_id FROM inventory WHERE product_id = ? AND node_id = ?").bind(productId, realNodeId).first();
 
       if (inv) {
-        // AQUÍ ES DONDE PISA EL VALOR (No lo suma)
-        await db.prepare("UPDATE inventory SET physical_stock = ? WHERE id = ?").bind(stock, inv.id).run();
+        // CORRECCIÓN 2: Actualizamos apuntando a la combinación exacta de producto y nodo
+        await db.prepare("UPDATE inventory SET physical_stock = ? WHERE product_id = ? AND node_id = ?").bind(stock, productId, realNodeId).run();
         updateCount++;
       } else {
         await db.prepare("INSERT INTO inventory (product_id, node_id, physical_stock, transit_stock) VALUES (?, ?, ?, 0)").bind(productId, realNodeId, stock).run();
@@ -51,7 +52,6 @@ export async function onRequestPost(context) {
     return new Response(JSON.stringify({ success: true, new_items: newCount, updated_items: updateCount }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
   } catch (error) {
-    // EL TRUCO: Le mandamos status 400 para que Cloudflare no tape nuestro error con su HTML
     const errorMsg = error.message || String(error) || "Error desconocido";
     return new Response(JSON.stringify({ error: "ERROR INTERNO BD: " + errorMsg }), { status: 400, headers: { 'Content-Type': 'application/json' } });
   }
