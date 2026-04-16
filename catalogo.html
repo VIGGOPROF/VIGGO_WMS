@@ -118,10 +118,10 @@
                 <div class="admin-card">
                     <h3><span>🏭</span> Fábricas</h3>
                     <div style="display: flex; gap: 8px;">
-                        <input type="text" id="factory-input" placeholder="Nombre de fábrica...">
-                        <button id="add-factory-btn" style="padding: 10px;">+</button>
+                        <input type="text" id="factory-input-cat" placeholder="Nombre de fábrica...">
+                        <button id="add-factory-btn-cat" style="padding: 10px;">+</button>
                     </div>
-                    <div class="item-list" id="factory-list">
+                    <div class="item-list" id="factory-list-cat">
                         <p style="padding: 20px; text-align: center; color: var(--text-muted);">Cargando...</p>
                     </div>
                 </div>
@@ -129,11 +129,11 @@
                 <div class="admin-card">
                     <h3><span>🏢</span> Depósitos / Nodos</h3>
                     <div style="display: flex; flex-direction: column; gap: 8px;">
-                        <input type="text" id="node-name-input" placeholder="Nombre (ej: Chile Filial)">
-                        <input type="number" id="node-order-input" placeholder="Prioridad (1, 2, 3...)">
-                        <button id="add-node-btn" style="width: 100%;">Registrar Depósito</button>
+                        <input type="text" id="node-name-input-cat" placeholder="Nombre (ej: Chile Filial)">
+                        <input type="number" id="node-order-input-cat" placeholder="Prioridad (1, 2, 3...)">
+                        <button id="add-node-btn-cat" style="width: 100%;">Registrar Depósito</button>
                     </div>
-                    <div class="item-list" id="node-list">
+                    <div class="item-list" id="node-list-cat">
                         <p style="padding: 20px; text-align: center; color: var(--text-muted);">Cargando...</p>
                     </div>
                 </div>
@@ -161,15 +161,15 @@
     </main>
 
     <script>
-        // --- MOTOR DE ARRANQUE AÑADIDO ---
+        // --- MOTOR DE ARRANQUE PROTEGIDO ---
         document.addEventListener("DOMContentLoaded", () => {
-            loadFactories();
-            loadNodes();
+            loadCatFactories();
+            loadCatNodes();
         });
 
-        // --- 1. LÓGICA DE FÁBRICAS ---
-        const loadFactories = async () => {
-            const list = document.getElementById('factory-list');
+        // --- 1. LÓGICA DE FÁBRICAS (Aislada de script.js) ---
+        const loadCatFactories = async () => {
+            const list = document.getElementById('factory-list-cat');
             try {
                 const res = await fetch('/api/factories');
                 const result = await res.json();
@@ -178,8 +178,8 @@
                         <div class="list-entry">
                             <span>${f.name}</span>
                             <div class="actions">
-                                <button class="action-btn" onclick="editFactory(${f.id}, '${f.name}')">✏️</button>
-                                <button class="action-btn delete" onclick="deleteFactory(${f.id})">🗑️</button>
+                                <button class="action-btn" onclick="editCatFactory(${f.id}, '${f.name}')">✏️</button>
+                                <button class="action-btn delete" onclick="deleteCatFactory(${f.id})">🗑️</button>
                             </div>
                         </div>
                     `).join('');
@@ -187,32 +187,32 @@
             } catch (e) { list.innerHTML = '<p style="padding:10px; color:red;">Error.</p>'; }
         };
 
-        document.getElementById('add-factory-btn').addEventListener('click', async () => {
-            const input = document.getElementById('factory-input');
+        document.getElementById('add-factory-btn-cat').addEventListener('click', async () => {
+            const input = document.getElementById('factory-input-cat');
             if (!input.value.trim()) return;
             await fetch('/api/factories', { method: 'POST', body: JSON.stringify({ name: input.value }), headers: {'Content-Type': 'application/json'} });
             input.value = '';
-            loadFactories();
+            loadCatFactories();
         });
 
-        window.editFactory = async (id, oldName) => {
+        window.editCatFactory = async (id, oldName) => {
             const name = prompt("Nuevo nombre de la fábrica:", oldName);
             if (name && name.trim() !== oldName) {
                 await fetch('/api/factories', { method: 'PUT', body: JSON.stringify({ id, name }), headers: {'Content-Type': 'application/json'} });
-                loadFactories();
+                loadCatFactories();
             }
         };
 
-        window.deleteFactory = async (id) => {
+        window.deleteCatFactory = async (id) => {
             if (confirm("¿Borrar fábrica? Esta acción fallará si hay productos asociados.")) {
                 await fetch(`/api/factories?id=${id}`, { method: 'DELETE' });
-                loadFactories();
+                loadCatFactories();
             }
         };
 
-        // --- 2. LÓGICA DE DEPÓSITOS (NODOS) ---
-        const loadNodes = async () => {
-            const list = document.getElementById('node-list');
+        // --- 2. LÓGICA DE DEPÓSITOS / NODOS (Aislada de script.js) ---
+        const loadCatNodes = async () => {
+            const list = document.getElementById('node-list-cat');
             try {
                 const res = await fetch('/api/nodes');
                 const result = await res.json();
@@ -221,8 +221,8 @@
                         <div class="list-entry">
                             <span><strong>[${n.display_order}]</strong> ${n.name}</span>
                             <div class="actions">
-                                <button class="action-btn" onclick="editNode(${n.id}, '${n.name}', ${n.display_order})">✏️</button>
-                                <button class="action-btn delete" onclick="deleteNode(${n.id})">🗑️</button>
+                                <button class="action-btn" onclick="editCatNode(${n.id}, '${n.name}', ${n.display_order})">✏️</button>
+                                <button class="action-btn delete" onclick="deleteCatNode(${n.id})">🗑️</button>
                             </div>
                         </div>
                     `).join('');
@@ -230,29 +230,29 @@
             } catch (e) { list.innerHTML = '<p style="padding:10px; color:red;">Error.</p>'; }
         };
 
-        document.getElementById('add-node-btn').addEventListener('click', async () => {
-            const name = document.getElementById('node-name-input').value;
-            const order = document.getElementById('node-order-input').value;
+        document.getElementById('add-node-btn-cat').addEventListener('click', async () => {
+            const name = document.getElementById('node-name-input-cat').value;
+            const order = document.getElementById('node-order-input-cat').value;
             if (!name) return;
             await fetch('/api/nodes', { method: 'POST', body: JSON.stringify({ name, order }), headers: {'Content-Type': 'application/json'} });
-            document.getElementById('node-name-input').value = '';
-            document.getElementById('node-order-input').value = '';
-            loadNodes();
+            document.getElementById('node-name-input-cat').value = '';
+            document.getElementById('node-order-input-cat').value = '';
+            loadCatNodes();
         });
 
-        window.editNode = async (id, oldName, oldOrder) => {
+        window.editCatNode = async (id, oldName, oldOrder) => {
             const name = prompt("Nombre del depósito:", oldName);
             const order = prompt("Prioridad de visualización:", oldOrder);
             if (name && order) {
                 await fetch('/api/nodes', { method: 'PUT', body: JSON.stringify({ id, name, order }), headers: {'Content-Type': 'application/json'} });
-                loadNodes();
+                loadCatNodes();
             }
         };
 
-        window.deleteNode = async (id) => {
+        window.deleteCatNode = async (id) => {
             if (confirm("¿Eliminar este depósito?")) {
                 await fetch(`/api/nodes?id=${id}`, { method: 'DELETE' });
-                loadNodes();
+                loadCatNodes();
             }
         };
 
