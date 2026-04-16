@@ -53,11 +53,20 @@ export async function onRequestPost(context) {
 
       // Si nos pasan el SKU en lugar del ID numérico, lo buscamos
       if (isNaN(productId) && item.sku) {
-        const prod = await db.prepare('SELECT id FROM products WHERE sku = ?').bind(item.sku.trim()).first();
+        const skuClean = String(item.sku).trim();
+        const prod = await db.prepare('SELECT id FROM products WHERE sku = ?').bind(skuClean).first();
+        
         if (!prod) {
-          return new Response(JSON.stringify({ error: `El SKU "${item.sku}" no existe en el sistema.` }), { status: 400 });
+          // ¡MAGIA! El producto no existe, lo creamos al vuelo.
+          // Si el Excel trae una columna "name", la usamos. Si no, le ponemos el SKU como nombre temporal.
+          const productName = item.name ? String(item.name).trim() : skuClean;
+          const insertInfo = await db.prepare('INSERT INTO products (sku, name) VALUES (?, ?)').bind(skuClean, productName).run();
+          
+          // Capturamos el ID del producto recién nacido para poder guardarle su precio
+          productId = parseInt(insertInfo.meta.last_row_id, 10);
+        } else {
+          productId = parseInt(prod.id, 10);
         }
-        productId = parseInt(prod.id, 10);
       }
 
       if (productId && !isNaN(productId)) {
