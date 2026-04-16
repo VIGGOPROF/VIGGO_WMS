@@ -14,12 +14,14 @@ export async function onRequest(context) {
       const id = body.id;
       const name = String(body.name || "").trim();
       const order = parseInt(body.order || body.display_order || body.priority) || 99;
+      // Atrapamos el país, si viene vacío le ponemos AR por defecto
+      const countryCode = String(body.country_code || "AR").trim().substring(0, 2).toUpperCase();
 
       if (!id || !name) {
          return new Response(JSON.stringify({ error: "Faltan datos para actualizar." }), { status: 400, headers: {"Content-Type": "application/json"} });
       }
 
-      await db.prepare("UPDATE nodes SET name = ?, display_order = ? WHERE id = ?").bind(name, order, id).run();
+      await db.prepare("UPDATE nodes SET name = ?, display_order = ?, country_code = ? WHERE id = ?").bind(name, order, countryCode, id).run();
       return new Response(JSON.stringify({ status: "success", message: "Depósito actualizado." }), { headers: {"Content-Type": "application/json"} });
     }
 
@@ -40,10 +42,12 @@ export async function onRequest(context) {
       const body = await context.request.json();
       const name = String(body.name || "").trim();
       const order = parseInt(body.order || body.display_order || body.priority) || 99;
+      // Atrapamos el país en la creación
+      const countryCode = String(body.country_code || "AR").trim().substring(0, 2).toUpperCase();
       
-      // ¡AQUÍ ESTÁ LA MAGIA! Le mandamos 'AR' para que la base de datos lo acepte
-      await db.prepare("INSERT INTO nodes (name, display_order, country_code) VALUES (?, ?, 'AR')").bind(name, order).run();
-      
+      if (!name) return new Response(JSON.stringify({ error: "El nombre es obligatorio." }), { status: 400, headers: {"Content-Type": "application/json"} });
+
+      await db.prepare("INSERT INTO nodes (name, display_order, country_code) VALUES (?, ?, ?)").bind(name, order, countryCode).run();
       return new Response(JSON.stringify({ status: "success" }), { headers: {"Content-Type": "application/json"} });
     }
 
