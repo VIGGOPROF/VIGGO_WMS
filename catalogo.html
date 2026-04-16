@@ -7,91 +7,24 @@
     <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
     <link rel="stylesheet" href="style.css">
     <style>
-        /* Diseño de rejilla para los 4 bloques administrativos */
-        .admin-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-            gap: 25px;
-            margin-top: 20px;
-        }
-
-        .admin-card {
-            background: #f8fafc;
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 25px;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-        }
-
-        .admin-card h3 {
-            font-size: 1.1rem;
-            color: var(--primary);
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            border-bottom: 2px solid var(--border);
-            padding-bottom: 10px;
-            margin-bottom: 10px;
-        }
-
-        .item-list {
-            max-height: 250px;
-            overflow-y: auto;
-            background: white;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-        }
-
-        .list-entry {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px 15px;
-            border-bottom: 1px solid var(--bg-app);
-            font-size: 0.9rem;
-        }
-
+        .admin-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 25px; margin-top: 20px; }
+        .admin-card { background: #f8fafc; border: 1px solid var(--border); border-radius: 12px; padding: 25px; display: flex; flex-direction: column; gap: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .admin-card h3 { font-size: 1.1rem; color: var(--primary); display: flex; align-items: center; gap: 10px; border-bottom: 2px solid var(--border); padding-bottom: 10px; margin-bottom: 10px; }
+        .item-list { max-height: 250px; overflow-y: auto; background: white; border: 1px solid var(--border); border-radius: 8px; }
+        .list-entry { display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; border-bottom: 1px solid var(--bg-app); font-size: 0.9rem; }
         .list-entry:last-child { border-bottom: none; }
         .list-entry:hover { background: #f1f5f9; }
-
-        .action-btn {
-            background: transparent !important;
-            color: var(--text-muted) !important;
-            padding: 6px !important;
-            box-shadow: none !important;
-            border-radius: 6px;
-            border: 1px solid transparent !important;
-        }
-
+        .action-btn { background: transparent !important; color: var(--text-muted) !important; padding: 6px !important; box-shadow: none !important; border-radius: 6px; border: 1px solid transparent !important; }
         .action-btn:hover { background: #e2e8f0 !important; color: var(--primary) !important; }
         .action-btn.delete:hover { color: var(--danger) !important; background: #fee2e2 !important; }
-
-        /* Estilos de carga de archivos (Sync y Catálogo) */
-        .upload-area {
-            border: 2px dashed #cbd5e1;
-            border-radius: 10px;
-            padding: 20px;
-            text-align: center;
-            background: white;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
+        .upload-area { border: 2px dashed #cbd5e1; border-radius: 10px; padding: 20px; text-align: center; background: white; cursor: pointer; transition: all 0.2s; }
         .upload-area:hover { border-color: var(--accent); background: #eff6ff; }
         .upload-icon { font-size: 2rem; display: block; margin-bottom: 10px; }
-
-        .stats-badge {
-            background: white;
-            border: 1px solid var(--border);
-            padding: 8px 12px;
-            border-radius: 6px;
-            font-size: 0.8rem;
-            font-weight: bold;
-            display: flex;
-            justify-content: space-between;
-        }
+        .stats-badge { background: white; border: 1px solid var(--border); padding: 8px 12px; border-radius: 6px; font-size: 0.8rem; font-weight: bold; display: flex; justify-content: space-between; }
+        
+        /* Caja de instrucciones Excel */
+        .excel-legend { background: #f0fdf4; border-left: 4px solid #10b981; padding: 12px; border-radius: 0 6px 6px 0; font-size: 0.8rem; color: #064e3b; margin-top: -5px;}
+        .excel-legend code { background: white; padding: 2px 6px; border-radius: 4px; border: 1px solid #a7f3d0; font-weight: bold; color: #047857;}
     </style>
 <script>
     if (!localStorage.getItem('viggo_auth_token')) window.location.href = 'login.html';
@@ -134,8 +67,13 @@
                 </div>
 
                 <div class="admin-card" style="border-top: 4px solid #10b981;">
-                    <h3><span>🔄</span> Sync Stock (RABANAL 2)</h3>
-                    <p style="font-size: 0.75rem; color: #64748b; margin-top: -5px;">Solo para Argentina. Procesa reporte crudo.</p>
+                    <h3><span>🔄</span> Sync Stock (Argentina)</h3>
+                    
+                    <div class="excel-legend">
+                        <strong>Formato de Excel requerido:</strong><br>
+                        Asegúrate de que la primera fila contenga estas tres columnas (no importa el orden):<br>
+                        <code>Código interno</code> | <code>Producto</code> | <code>Stock</code>
+                    </div>
                     
                     <label class="upload-area" for="sync-stock-file" id="sync-drop-zone">
                         <span class="upload-icon">📊</span>
@@ -149,7 +87,7 @@
                         <div class="stats-badge" style="color: #0369a1; border-color: #0369a1;">Actualizados: <span id="sync-upd">0</span></div>
                     </div>
 
-                    <div id="sync-status" style="font-size: 0.8rem; text-align: center; font-weight: bold;"></div>
+                    <div id="sync-status" style="font-size: 0.8rem; text-align: center; font-weight: bold; margin-top:10px;"></div>
                 </div>
 
                 <div class="admin-card">
@@ -180,97 +118,58 @@
             loadCatNodes();
         });
 
-        // --- 1. LÓGICA DE FÁBRICAS ---
+        // --- LÓGICAS BÁSICAS ---
         const loadCatFactories = async () => {
             const list = document.getElementById('factory-list-cat');
             try {
                 const res = await fetch('/api/factories');
                 const result = await res.json();
-                if (res.ok && result.data) {
-                    list.innerHTML = result.data.map(f => `
-                        <div class="list-entry">
-                            <span>${f.name}</span>
-                            <div class="actions">
-                                <button class="action-btn" onclick="editCatFactory(${f.id}, '${f.name}')">✏️</button>
-                                <button class="action-btn delete" onclick="deleteCatFactory(${f.id})">🗑️</button>
-                            </div>
-                        </div>
-                    `).join('');
-                }
+                if (res.ok && result.data) list.innerHTML = result.data.map(f => `<div class="list-entry"><span>${f.name}</span><div class="actions"><button class="action-btn delete" onclick="deleteCatFactory(${f.id})">🗑️</button></div></div>`).join('');
             } catch (e) { list.innerHTML = '<p style="padding:10px; color:red;">Error.</p>'; }
         };
 
-        document.getElementById('add-factory-btn-cat').addEventListener('click', async () => {
-            const input = document.getElementById('factory-input-cat');
-            if (!input.value.trim()) return;
-            await fetch('/api/factories', { method: 'POST', body: JSON.stringify({ name: input.value }), headers: {'Content-Type': 'application/json'} });
-            input.value = '';
-            loadCatFactories();
-        });
-
-        window.editCatFactory = async (id, oldName) => {
-            const name = prompt("Nuevo nombre de la fábrica:", oldName);
-            if (name && name.trim() !== oldName) {
-                await fetch('/api/factories', { method: 'PUT', body: JSON.stringify({ id, name }), headers: {'Content-Type': 'application/json'} });
-                loadCatFactories();
-            }
-        };
-
-        window.deleteCatFactory = async (id) => {
-            if (confirm("¿Borrar fábrica? Esta acción fallará si hay productos asociados.")) {
-                await fetch(`/api/factories?id=${id}`, { method: 'DELETE' });
-                loadCatFactories();
-            }
-        };
-
-        // --- 2. LÓGICA DE DEPÓSITOS / NODOS (CON PARSEINT PARA EVITAR ERROR 500) ---
         const loadCatNodes = async () => {
             const list = document.getElementById('node-list-cat');
             try {
                 const res = await fetch('/api/nodes');
                 const result = await res.json();
-                if (res.ok && result.data) {
-                    list.innerHTML = result.data.map(n => `
-                        <div class="list-entry">
-                            <span><strong>[${n.display_order}]</strong> ${n.name}</span>
-                            <div class="actions">
-                                <button class="action-btn" onclick="editCatNode(${n.id}, '${n.name}', ${n.display_order})">✏️</button>
-                                <button class="action-btn delete" onclick="deleteCatNode(${n.id})">🗑️</button>
-                            </div>
-                        </div>
-                    `).join('');
-                }
-            } catch (e) { list.innerHTML = '<p style="padding:10px; color:red;">Error.</p>'; }
+                if (res.ok && result.data) list.innerHTML = result.data.map(n => `<div class="list-entry"><span><strong>[${n.display_order}]</strong> ${n.name}</span><div class="actions"><button class="action-btn delete" onclick="deleteCatNode(${n.id})">🗑️</button></div></div>`).join('');
+            } catch (e) { list.innerHTML = '<p style="padding:10px; color:red;">Error al cargar nodos.</p>'; }
         };
 
+        // --- CREAR DEPÓSITO (CON ESCUDO ANTI-500) ---
         document.getElementById('add-node-btn-cat').addEventListener('click', async () => {
-            const name = document.getElementById('node-name-input-cat').value;
-            const orderRaw = document.getElementById('node-order-input-cat').value;
+            const nameInput = document.getElementById('node-name-input-cat');
+            const orderInput = document.getElementById('node-order-input-cat');
+            const name = nameInput.value;
+            const orderRaw = orderInput.value;
             if (!name) return;
             
-            await fetch('/api/nodes', { 
-                method: 'POST', 
-                body: JSON.stringify({ name: name, order: parseInt(orderRaw) || 0 }), 
-                headers: {'Content-Type': 'application/json'} 
-            });
-            
-            document.getElementById('node-name-input-cat').value = '';
-            document.getElementById('node-order-input-cat').value = '';
-            loadCatNodes();
-        });
-
-        window.editCatNode = async (id, oldName, oldOrder) => {
-            const name = prompt("Nombre del depósito:", oldName);
-            const orderRaw = prompt("Prioridad de visualización:", oldOrder);
-            if (name && orderRaw) {
-                await fetch('/api/nodes', { 
-                    method: 'PUT', 
-                    body: JSON.stringify({ id: id, name: name, order: parseInt(orderRaw) || 0 }), 
+            try {
+                const res = await fetch('/api/nodes', { 
+                    method: 'POST', 
+                    body: JSON.stringify({ name: name, display_order: parseInt(orderRaw) || 999 }), 
                     headers: {'Content-Type': 'application/json'} 
                 });
-                loadCatNodes();
+                
+                const textResponse = await res.text(); // Leemos como texto primero para atrapar errores nativos
+                
+                try {
+                    const data = JSON.parse(textResponse);
+                    if (!res.ok) alert("❌ ERROR DE BASE DE DATOS:\n\n" + (data.error || "Error desconocido"));
+                    else {
+                        nameInput.value = '';
+                        orderInput.value = '';
+                        loadCatNodes();
+                    }
+                } catch(parseError) {
+                    // Si llega aquí, significa que Cloudflare escupió un HTML crudo de Error 500
+                    alert("❌ ERROR FATAL DEL SERVIDOR (Crash 500):\n\nEl servidor colapsó y no devolvió JSON. Posibles causas:\n1. Columna faltante en la base de datos.\n2. Error de sintaxis en el archivo backend.\n\nRespuesta cruda: " + textResponse.substring(0, 200) + "...");
+                }
+            } catch (e) {
+                alert("❌ ERROR GRAVE DE RED:\n\n" + e.message);
             }
-        };
+        });
 
         window.deleteCatNode = async (id) => {
             if (confirm("¿Eliminar este depósito?")) {
@@ -279,7 +178,7 @@
             }
         };
 
-        // --- 3. LÓGICA DE SINCRONIZACIÓN INTELIGENTE (RABANAL 2) ---
+        // --- SINCRONIZADOR MEJORADO Y SIMPLIFICADO ---
         document.getElementById('sync-stock-file').addEventListener('change', (e) => {
             if (e.target.files.length > 0) processSyncStock(e.target.files[0]);
         });
@@ -289,6 +188,7 @@
             const statsDiv = document.getElementById('sync-stats');
             status.innerHTML = '⏳ Escaneando archivo...';
             status.style.color = '#0f172a';
+            document.getElementById('sync-drop-zone').style.display = 'none';
 
             const reader = new FileReader();
             reader.onload = async (e) => {
@@ -296,35 +196,27 @@
                 const workbook = XLSX.read(data, { type: 'array' });
                 const rows = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { header: 1 });
 
-                let headerIdx = -1, skuCol = -1, prodCol = -1, rabanalStart = -1, stockCol = -1;
+                let headerIdx = -1, skuCol = -1, prodCol = -1, stockCol = -1;
 
-                // Radar: Detectar estructura
-                for (let i = 0; i < Math.min(30, rows.length); i++) {
+                // Radar Simplificado: Solo busca Código, Producto y Stock en las primeras 15 filas
+                for (let i = 0; i < Math.min(15, rows.length); i++) {
                     const row = rows[i] || [];
                     for (let j = 0; j < row.length; j++) {
                         const cell = String(row[j] || '').trim().toLowerCase();
-                        if (cell.includes('código interno') || cell.includes('codigo interno')) { headerIdx = i; skuCol = j; }
-                        if (cell === 'producto') prodCol = j;
+                        if (cell.includes('código') || cell.includes('codigo') || cell === 'sku') skuCol = j;
+                        if (cell.includes('producto') || cell.includes('artículo') || cell.includes('nombre')) prodCol = j;
+                        if (cell.includes('stock') || cell.includes('cantidad')) stockCol = j;
                     }
-                    if (headerIdx !== -1) break;
-                }
-
-                if (headerIdx !== -1) {
-                    const rowAbove = rows[headerIdx - 1] || [];
-                    const rowHeaders = rows[headerIdx] || [];
-                    for (let j = 0; j < rowAbove.length; j++) {
-                        if (String(rowAbove[j] || '').toUpperCase().includes('RABANAL 2')) { rabanalStart = j; break; }
-                    }
-                    if (rabanalStart !== -1) {
-                        for (let j = rabanalStart; j < rabanalStart + 5; j++) {
-                            if (String(rowHeaders[j] || '').toLowerCase().includes('stock disponible')) { stockCol = j; break; }
-                        }
+                    if (skuCol !== -1 && stockCol !== -1) {
+                        headerIdx = i;
+                        break;
                     }
                 }
 
                 if (skuCol === -1 || stockCol === -1) {
-                    status.innerHTML = '❌ Formato no reconocido';
-                    status.style.color = 'red';
+                    alert("❌ Formato inválido. No se encontraron las columnas 'Código interno' y/o 'Stock'.");
+                    status.innerHTML = '';
+                    document.getElementById('sync-drop-zone').style.display = 'block';
                     return;
                 }
 
@@ -338,62 +230,47 @@
                     cleanItems.push({ sku, name: String(row[prodCol] || sku), stock });
                 }
 
-                status.innerHTML = '🚀 Impactando base de datos...';
+                status.innerHTML = '🚀 Enviando a la base de datos...';
+                
                 try {
                     const res = await fetch('/api/sync_rabanal', {
                         method: 'POST',
                         body: JSON.stringify({ items: cleanItems }),
                         headers: { 'Content-Type': 'application/json' }
                     });
-                    const resData = await res.json();
-                    if (res.ok) {
-                        document.getElementById('sync-total').innerText = cleanItems.length;
-                        document.getElementById('sync-new').innerText = resData.new_items;
-                        document.getElementById('sync-upd').innerText = resData.updated_items;
-                        statsDiv.style.display = 'flex';
-                        status.innerHTML = '✅ Sincronizado correctamente';
-                        status.style.color = '#10b981';
+                    
+                    const resText = await res.text();
+                    try { 
+                        const resData = JSON.parse(resText); 
+                        if (res.ok) {
+                            document.getElementById('sync-total').innerText = cleanItems.length;
+                            document.getElementById('sync-new').innerText = resData.new_items || 0;
+                            document.getElementById('sync-upd').innerText = resData.updated_items || 0;
+                            statsDiv.style.display = 'flex';
+                            status.innerHTML = '✅ ¡Stock Sincronizado!';
+                            status.style.color = '#10b981';
+                            setTimeout(() => { document.getElementById('sync-drop-zone').style.display = 'block'; }, 4000);
+                        } else {
+                            alert("❌ ERROR EN SERVIDOR:\n\n" + resData.error);
+                            status.innerHTML = `❌ Error en Servidor`;
+                            status.style.color = 'red';
+                            document.getElementById('sync-drop-zone').style.display = 'block';
+                        }
+                    } catch(e) {
+                        alert("❌ CRASH DEL SERVIDOR (Fallo 500):\n\nEl backend colapsó. Respuesta: " + resText.substring(0,200));
+                        status.innerHTML = '❌ Error crítico.';
+                        status.style.color = 'red';
+                        document.getElementById('sync-drop-zone').style.display = 'block';
                     }
-                } catch (err) { status.innerHTML = '❌ Error de conexión'; }
+                } catch (err) { 
+                    status.innerHTML = '❌ Error de red.';
+                    status.style.color = 'red';
+                    document.getElementById('sync-drop-zone').style.display = 'block';
+                }
             };
             reader.readAsArrayBuffer(file);
         }
-
-        // --- 4. LÓGICA DE CATÁLOGO EXCEL ---
-        const catalogFile = document.getElementById('catalog-file');
-        const uploadBtn = document.getElementById('upload-catalog-btn');
-
-        catalogFile.addEventListener('change', (e) => {
-            if (e.target.files.length > 0) {
-                document.getElementById('file-name-text').innerText = e.target.files[0].name;
-                document.getElementById('file-ready').style.display = 'block';
-                uploadBtn.disabled = false;
-            }
-        });
-
-        uploadBtn.addEventListener('click', () => {
-            const reader = new FileReader();
-            const status = document.getElementById('catalog-status');
-            status.innerHTML = '⏳ Procesando catálogo...';
-            uploadBtn.disabled = true;
-
-            reader.onload = async (e) => {
-                const data = new Uint8Array(e.target.result);
-                const workbook = XLSX.read(data, { type: 'array' });
-                const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
-
-                try {
-                    const res = await fetch('/api/catalog', { method: 'POST', body: JSON.stringify({ items: jsonData }), headers: {'Content-Type': 'application/json'} });
-                    if (res.ok) {
-                        status.innerHTML = '✅ Base de SKUs actualizada.';
-                        setTimeout(() => location.reload(), 1500);
-                    } else { status.innerHTML = '❌ Error al procesar.'; }
-                } catch (err) { status.innerHTML = '❌ Error de red.'; }
-            };
-            reader.readAsArrayBuffer(catalogFile.files[0]);
-        });
     </script>
-    
     <script src="script.js"></script>
 </body>
 </html>
