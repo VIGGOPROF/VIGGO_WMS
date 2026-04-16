@@ -36,15 +36,15 @@ export async function onRequestPost(context) {
         productId = product.id;
       }
 
-      // CORRECCIÓN 1: No buscamos la columna "id", solo comprobamos si existe la fila
       const inv = await db.prepare("SELECT product_id FROM inventory WHERE product_id = ? AND node_id = ?").bind(productId, realNodeId).first();
 
       if (inv) {
-        // CORRECCIÓN 2: Actualizamos apuntando a la combinación exacta de producto y nodo
-        await db.prepare("UPDATE inventory SET physical_stock = ? WHERE product_id = ? AND node_id = ?").bind(stock, productId, realNodeId).run();
+        // CORRECCIÓN: Usamos la columna real "quantity" para pisar el stock
+        await db.prepare("UPDATE inventory SET quantity = ? WHERE product_id = ? AND node_id = ?").bind(stock, productId, realNodeId).run();
         updateCount++;
       } else {
-        await db.prepare("INSERT INTO inventory (product_id, node_id, physical_stock, transit_stock) VALUES (?, ?, ?, 0)").bind(productId, realNodeId, stock).run();
+        // CORRECCIÓN: Usamos la columna real "quantity" para crear el nuevo registro
+        await db.prepare("INSERT INTO inventory (product_id, node_id, quantity, transit_stock) VALUES (?, ?, ?, 0)").bind(productId, realNodeId, stock).run();
         updateCount++;
       }
     }
