@@ -1,54 +1,59 @@
-// 1. OBTENER DEPÓSITOS (GET)
-export async function onRequestGet(context) {
-  try {
-    const { results } = await context.env.DB.prepare("SELECT * FROM nodes ORDER BY display_order ASC").all();
-    return new Response(JSON.stringify({ status: "success", data: results }), { status: 200, headers: { "Content-Type": "application/json" } });
-  } catch (error) {
-    return new Response(JSON.stringify({ error: "Error GET: " + error.message }), { status: 500, headers: { "Content-Type": "application/json" } });
-  }
-}
+export async function onRequest(context) {
+  const db = context.env.DB;
+  const method = context.request.method;
+  const url = new URL(context.request.url);
 
-// 2. CREAR DEPÓSITO (POST)
-export async function onRequestPost(context) {
   try {
-    const body = await context.request.json();
-    const name = String(body.name || "").trim();
-    const order = parseInt(body.display_order || body.order || 999);
-
-    if (!name) {
-      return new Response(JSON.stringify({ error: "El nombre es obligatorio." }), { status: 400, headers: { "Content-Type": "application/json" } });
+    // LEER DEPÓSITOS
+    if (method === "GET") {
+      const { results } = await db.prepare("SELECT * FROM nodes ORDER BY display_order ASC").all();
+      return new Response(JSON.stringify({ status: "success", data: results }), { headers: {"Content-Type": "application/json"} });
     }
 
-    await context.env.DB.prepare("INSERT INTO nodes (name, display_order) VALUES (?, ?)").bind(name, order).run();
-    return new Response(JSON.stringify({ status: "success" }), { status: 200, headers: { "Content-Type": "application/json" } });
-  } catch (error) {
-    return new Response(JSON.stringify({ error: "Error POST: " + error.message }), { status: 500, headers: { "Content-Type": "application/json" } });
-  }
-}
+    // EDITAR DEPÓSITO (¡Restaurado!)
+    if (method === "PUT") {
+      const body = await context.request.json();
+      const id = body.id;
+      const name = String(body.name || "").trim();
+      const order = parseInt(body.order || body.display_order || body.priority) || 99;
 
-// 3. ELIMINAR DEPÓSITO (DELETE)
-export async function onRequestDelete(context) {
-  try {
-    const url = new URL(context.request.url);
-    const id = url.searchParams.get('id');
+      if (!id || !name) {
+         return new Response(JSON.stringify({ error: "Faltan datos para actualizar." }), { status: 400, headers: {"Content-Type": "application/json"} });
+      }
 
-    if (!id) {
-      return new Response(JSON.stringify({ error: "Falta ID." }), { status: 400, headers: { "Content-Type": "application/json" } });
+      await db.prepare("UPDATE nodes SET name = ?, display_order = ? WHERE id = ?").bind(name, order, id).run();
+      return new Response(JSON.stringify({ status: "success", message: "Depósito actualizado." }), { headers: {"Content-Type": "application/json"} });
     }
 
-    // Verificar si hay stock antes de borrar usando las columnas correctas
-    const checkStock = await context.env.DB.prepare("SELECT SUM(physical_stock + transit_stock) as qty FROM inventory WHERE node_id = ?").bind(id).first();
-    
-    if (checkStock && checkStock.qty > 0) {
-      return new Response(JSON.stringify({ error: "Tiene stock adentro. Vacíalo primero." }), { status: 400, headers: { "Content-Type": "application/json" } });
+    // BORRAR DEPÓSITO (Con protección de stock)
+    if (method === "DELETE") {
+      const id = url.searchParams.get('id');
+      if (!id) return new Response(JSON.stringify({ error: "Falta el ID." }), { status: 400, headers: {"Content-Type": "application/json"} });
+
+      const checkStock = await db.prepare("SELECT SUM(physical_stock + transit_stock) as qty FROM inventory WHERE node_id = ?").bind(id).first();
+      if (checkStock && checkStock.qty > 0) {
+        return new Response(JSON.stringify({ error: "No puedes borrar un depósito que tiene stock adentro. Primero vacíalo." }), { status: 400, headers: {"Content-Type": "application/json"} });
+      }
+
+      await db.prepare("DELETE FROM nodes WHERE id = ?").bind(id).run();
+      return new Response(JSON.stringify({ status: "success" }), { headers: {"Content-Type": "application/json"} });
     }
 
-    await context.env.DB.prepare("DELETE FROM nodes WHERE id = ?").bind(id).run();
-    return new Response(JSON.stringify({ status: "success" }), { status: 200, headers: { "Content-Type": "application/json" } });
+    // CREAR DEPÓSITO (Por si algún día vuelve a funcionar)
+    if (method === "POST") {
+      const body = await context.request.json();
+      const name = String(body.name || "").trim();
+      const order = parseInt(body.order || body.display_order || body.priority) || 99;
+      await db.prepare("INSERT INTO nodes (name, display_order) VALUES (?, ?)").bind(name, order).run();
+      return new Response(JSON.stringify({ status: "success" }), { headers: {"Content-Type": "application/json"} });
+    }
+
+    return new Response(JSON.stringify({ error: "Método no soportado." }), { status: 405 });
+
   } catch (error) {
     if (error.message.includes('FOREIGN KEY')) {
-      return new Response(JSON.stringify({ error: "Hay clientes atados a este depósito." }), { status: 400, headers: { "Content-Type": "application/json" } });
+        return new Response(JSON.stringify({ error: "No se puede borrar. Hay datos asociados a este depósito." }), { status: 400, headers: {"Content-Type": "application/json"} });
     }
-    return new Response(JSON.stringify({ error: "Error DELETE: " + error.message }), { status: 500, headers: { "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: {"Content-Type": "application/json"} });
   }
 }
