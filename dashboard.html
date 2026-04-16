@@ -13,14 +13,26 @@
         
         /* Barra de herramientas superior */
         .toolbar { background: white; border: 1px solid var(--border); border-radius: 8px; padding: 15px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-        .toolbar-group { display: flex; align-items: center; gap: 10px; }
+        .toolbar-group { display: flex; align-items: center; gap: 15px; flex: 1; }
+        .toolbar-actions { display: flex; align-items: center; gap: 10px; }
         
-        .search-box { padding: 8px 12px; border-radius: 6px; border: 1px solid #cbd5e1; outline: none; width: 250px; font-size: 0.9rem; }
-        .category-select { padding: 8px 12px; border-radius: 6px; border: 1px solid #cbd5e1; outline: none; min-width: 180px; font-size: 0.9rem; cursor: pointer; }
+        /* FIX: Buscador inquebrantable */
+        .search-box { padding: 8px 12px; border-radius: 6px; border: 1px solid #cbd5e1; outline: none; min-width: 280px; flex-shrink: 0; font-size: 0.9rem; }
+        .search-box:focus { border-color: var(--primary); }
         
-        .btn-excel { background: #10b981; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 5px; font-size: 0.9rem; }
+        /* FIX: Desplegable Personalizado Multiselección */
+        .custom-select { position: relative; min-width: 220px; font-size: 0.9rem; user-select: none; }
+        .select-btn { background: white; border: 1px solid #cbd5e1; padding: 8px 12px; border-radius: 6px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; color: #334155; }
+        .select-btn:hover { background: #f8fafc; }
+        .select-content { display: none; position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #cbd5e1; border-radius: 6px; margin-top: 5px; max-height: 250px; overflow-y: auto; z-index: 100; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .select-content.show { display: block; }
+        .select-content label { display: flex; align-items: center; gap: 8px; padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f1f5f9; }
+        .select-content label:hover { background: #f8fafc; }
+        
+        /* Botones */
+        .btn-excel { background: #10b981; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 5px; font-size: 0.9rem; transition: background 0.2s;}
         .btn-excel:hover { background: #059669; }
-        .btn-update { background: #0f172a; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 5px; font-size: 0.9rem; }
+        .btn-update { background: #0f172a; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 5px; font-size: 0.9rem; transition: background 0.2s;}
         .btn-update:hover { background: #1e293b; }
         
         /* Tabla Matricial */
@@ -55,11 +67,18 @@
             <div class="toolbar">
                 <div class="toolbar-group">
                     <input type="text" id="search-input" class="search-box" placeholder="🔍 Filtrar por SKU o nombre..." onkeyup="applyLocalFilters()">
-                    <select id="category-dropdown" class="category-select" onchange="loadMatrixData()">
-                        <option value="TODAS">Todas las Categorías</option>
-                    </select>
+                    
+                    <div class="custom-select" id="multi-select-container">
+                        <div class="select-btn" onclick="toggleDropdown()">
+                            <span id="select-btn-text">Todas las Categorías</span>
+                            <span>▼</span>
+                        </div>
+                        <div class="select-content" id="cat-options-list">
+                            </div>
+                    </div>
                 </div>
-                <div class="toolbar-group">
+
+                <div class="toolbar-actions">
                     <label style="display: flex; align-items: center; gap: 5px; font-size: 0.9rem; cursor: pointer; border: 1px solid #cbd5e1; padding: 7px 12px; border-radius: 6px;">
                         <input type="checkbox" id="transit-toggle" onchange="applyLocalFilters()">
                         🚚 Solo Tránsito
@@ -75,11 +94,11 @@
                         <tr>
                             <th class="col-left">SKU</th>
                             <th class="col-left">Producto</th>
-                            </tr>
+                        </tr>
                     </thead>
                     <tbody id="matrix-body">
                         <tr>
-                            <td colspan="10" style="text-align: center; padding: 30px;">⏳ Cargando matriz...</td>
+                            <td colspan="10" style="text-align: center; padding: 30px;">⏳ Cargando matriz global...</td>
                         </tr>
                     </tbody>
                 </table>
@@ -93,39 +112,46 @@
         let globalItems = [];
         let isDropdownLoaded = false;
 
+        // 1. Cargar datos maestros (Una sola vez desde el servidor)
         async function loadMatrixData() {
-            const dropdown = document.getElementById('category-dropdown');
-            const selectedCategory = dropdown.value;
             const tbody = document.getElementById('matrix-body');
             const thead = document.getElementById('matrix-head');
             
-            tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; padding: 30px;">⏳ Actualizando matriz...</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; padding: 30px;">⏳ Obteniendo datos del servidor...</td></tr>';
 
             try {
-                const res = await fetch(`/api/dashboard?category=${encodeURIComponent(selectedCategory)}`);
+                // Pedimos TODOS los datos, el filtro ahora es local e instantáneo
+                const res = await fetch(`/api/dashboard`);
                 const data = await res.json();
 
                 if (data.success) {
                     globalNodes = data.nodes;
                     globalItems = data.items;
 
-                    // 1. Cargar el desplegable de Categorías (solo la primera vez)
+                    // Llenar checkboxes de categorías
                     if (!isDropdownLoaded && data.categories) {
-                        let optionsHtml = '<option value="TODAS">Todas las Categorías</option>';
-                        data.categories.forEach(cat => { optionsHtml += `<option value="${cat}">${cat}</option>`; });
-                        dropdown.innerHTML = optionsHtml;
-                        dropdown.value = selectedCategory;
+                        const listContainer = document.getElementById('cat-options-list');
+                        let html = '';
+                        data.categories.forEach(cat => {
+                            html += `
+                                <label>
+                                    <input type="checkbox" class="cat-filter-cb" value="${cat}" onchange="updateDropdownText(); applyLocalFilters();"> 
+                                    ${cat}
+                                </label>
+                            `;
+                        });
+                        listContainer.innerHTML = html;
                         isDropdownLoaded = true;
                     }
 
-                    // 2. Dibujar las Cabeceras de la Matriz (Depósitos)
+                    // Dibujar Cabeceras (Depósitos)
                     let headerHtml = `<tr><th class="col-left">SKU</th><th class="col-left">Producto</th>`;
                     globalNodes.forEach(n => { headerHtml += `<th>${n.name}</th>`; });
                     headerHtml += `</tr>`;
                     thead.innerHTML = headerHtml;
 
-                    // 3. Dibujar las Filas
-                    renderTableRows(globalItems);
+                    // Dibujar Matriz Completa
+                    applyLocalFilters();
 
                 } else {
                     tbody.innerHTML = `<tr><td colspan="10" style="text-align: center; color: red;">❌ Error: ${data.error}</td></tr>`;
@@ -135,12 +161,72 @@
             }
         }
 
-        // Dibuja las filas basándose en los datos pasados (útil para el buscador)
+        // 2. Control Visual del Desplegable
+        function toggleDropdown() {
+            document.getElementById('cat-options-list').classList.toggle('show');
+        }
+
+        function updateDropdownText() {
+            const checkboxes = document.querySelectorAll('.cat-filter-cb:checked');
+            const btnText = document.getElementById('select-btn-text');
+            
+            if (checkboxes.length === 0) {
+                btnText.innerText = "Todas las Categorías";
+            } else if (checkboxes.length === 1) {
+                btnText.innerText = checkboxes[0].value;
+            } else {
+                btnText.innerText = `[${checkboxes.length}] Categorías filtradas`;
+            }
+        }
+
+        // Cerrar el desplegable si se hace clic afuera
+        window.onclick = function(event) {
+            if (!event.target.closest('.custom-select')) {
+                const dropdowns = document.getElementsByClassName("select-content");
+                for (let i = 0; i < dropdowns.length; i++) {
+                    dropdowns[i].classList.remove('show');
+                }
+            }
+        }
+
+        // 3. Motor de Filtro Local Instantáneo
+        function applyLocalFilters() {
+            const searchTerm = document.getElementById('search-input').value.toLowerCase();
+            const onlyTransit = document.getElementById('transit-toggle').checked;
+            
+            // Atrapamos las categorías tildadas
+            const checkedCats = Array.from(document.querySelectorAll('.cat-filter-cb:checked')).map(cb => cb.value);
+
+            // Filtramos la lista global en memoria
+            const filteredItems = globalItems.filter(item => {
+                // Filtro 1: Buscador de texto
+                const matchText = item.sku.toLowerCase().includes(searchTerm) || item.name.toLowerCase().includes(searchTerm);
+                
+                // Filtro 2: Tránsito
+                let hasTransit = false;
+                if (onlyTransit) {
+                    for (const nodeId in item.stock) {
+                        if (item.stock[nodeId].transit > 0) hasTransit = true;
+                    }
+                } else {
+                    hasTransit = true; // Pasan todos
+                }
+
+                // Filtro 3: Categorías (Pasa si no hay nada tildado, o si su categoría está en la lista)
+                const matchCat = checkedCats.length === 0 || checkedCats.includes(item.category);
+
+                return matchText && hasTransit && matchCat;
+            });
+
+            renderTableRows(filteredItems);
+        }
+
+        // 4. Dibujar las filas resultantes
         function renderTableRows(items) {
             const tbody = document.getElementById('matrix-body');
             
             if (items.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="${globalNodes.length + 2}" style="text-align: center; padding: 30px;">No se encontraron productos.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="${globalNodes.length + 2}" style="text-align: center; padding: 30px; color: #64748b;">No se encontraron productos para este filtro.</td></tr>`;
                 return;
             }
 
@@ -148,12 +234,9 @@
             items.forEach(item => {
                 let rowHtml = `<tr><td class="col-left sku-bold">${item.sku}</td><td class="col-left">${item.name}</td>`;
                 
-                // Iteramos sobre cada depósito para llenar la celda
                 globalNodes.forEach(node => {
                     const stockData = item.stock[node.id] || { quantity: 0, transit: 0 };
                     const cellClass = stockData.transit > 0 ? 'cell-transit' : '';
-                    
-                    // Si tiene tránsito, mostramos un tooltip al pasar el mouse
                     const tooltip = stockData.transit > 0 ? `title="Físico: ${stockData.quantity} | En camino: ${stockData.transit}"` : '';
                     
                     rowHtml += `<td class="${cellClass}" ${tooltip}>${stockData.quantity}</td>`;
@@ -166,38 +249,14 @@
             tbody.innerHTML = rowsHtml;
         }
 
-        // Filtro Local (Buscador rápido + Checkbox Tránsito)
-        function applyLocalFilters() {
-            const searchTerm = document.getElementById('search-input').value.toLowerCase();
-            const onlyTransit = document.getElementById('transit-toggle').checked;
-
-            const filteredItems = globalItems.filter(item => {
-                // 1. Filtro de texto (SKU o Nombre)
-                const matchText = item.sku.toLowerCase().includes(searchTerm) || item.name.toLowerCase().includes(searchTerm);
-                
-                // 2. Filtro de tránsito
-                let hasTransit = false;
-                if (onlyTransit) {
-                    for (const nodeId in item.stock) {
-                        if (item.stock[nodeId].transit > 0) hasTransit = true;
-                    }
-                } else {
-                    hasTransit = true; // Si el check está apagado, pasan todos
-                }
-
-                return matchText && hasTransit;
-            });
-
-            renderTableRows(filteredItems);
-        }
-
-        // Exportar la tabla visible a Excel
+        // 5. Exportar a Excel
         function exportToExcel() {
             const table = document.getElementById("matrix-table");
-            const wb = XLSX.utils.table_to_book(table, { sheet: "Inventario" });
+            const wb = XLSX.utils.table_to_book(table, { sheet: "Inventario Matricial" });
             XLSX.writeFile(wb, `Inventario_Global_${new Date().toISOString().split('T')[0]}.xlsx`);
         }
 
+        // Arranque
         document.addEventListener("DOMContentLoaded", () => {
             loadMatrixData();
         });
