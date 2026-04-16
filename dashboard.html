@@ -6,48 +6,7 @@
     <title>Panorama Global | Viiggo WMS</title>
     <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
     <link rel="stylesheet" href="style.css">
-    <style>
-        .header-section { margin-bottom: 20px; }
-        .header-section h2 { font-size: 1.5rem; color: #0f172a; margin-bottom: 5px; }
-        .header-section p { color: #64748b; font-size: 0.9rem; }
-        
-        /* Barra de herramientas superior */
-        .toolbar { background: white; border: 1px solid var(--border); border-radius: 8px; padding: 15px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-        .toolbar-group { display: flex; align-items: center; gap: 15px; flex: 1; }
-        .toolbar-actions { display: flex; align-items: center; gap: 10px; }
-        
-        /* FIX: Buscador inquebrantable */
-        .search-box { padding: 8px 12px; border-radius: 6px; border: 1px solid #cbd5e1; outline: none; min-width: 280px; flex-shrink: 0; font-size: 0.9rem; }
-        .search-box:focus { border-color: var(--primary); }
-        
-        /* FIX: Desplegable Personalizado Multiselección */
-        .custom-select { position: relative; min-width: 220px; font-size: 0.9rem; user-select: none; }
-        .select-btn { background: white; border: 1px solid #cbd5e1; padding: 8px 12px; border-radius: 6px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; color: #334155; }
-        .select-btn:hover { background: #f8fafc; }
-        .select-content { display: none; position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #cbd5e1; border-radius: 6px; margin-top: 5px; max-height: 250px; overflow-y: auto; z-index: 100; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        .select-content.show { display: block; }
-        .select-content label { display: flex; align-items: center; gap: 8px; padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f1f5f9; }
-        .select-content label:hover { background: #f8fafc; }
-        
-        /* Botones */
-        .btn-excel { background: #10b981; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 5px; font-size: 0.9rem; transition: background 0.2s;}
-        .btn-excel:hover { background: #059669; }
-        .btn-update { background: #0f172a; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 5px; font-size: 0.9rem; transition: background 0.2s;}
-        .btn-update:hover { background: #1e293b; }
-        
-        /* Tabla Matricial */
-        .matrix-container { background: white; border: 1px solid var(--border); border-radius: 8px; overflow-x: auto; box-shadow: 0 1px 3px rgba(0,0,0,0.05); max-height: 65vh; }
-        .matrix-table { width: 100%; border-collapse: collapse; text-align: right; white-space: nowrap; }
-        .matrix-table th { background: #f8fafc; padding: 12px 15px; font-size: 0.85rem; color: #334155; border-bottom: 2px solid var(--border); border-right: 1px solid var(--border); position: sticky; top: 0; z-index: 10; text-align: right; }
-        .matrix-table th.col-left { text-align: left; }
-        .matrix-table td { padding: 10px 15px; border-bottom: 1px solid var(--bg-app); border-right: 1px solid var(--border); font-size: 0.85rem; color: #334155; }
-        .matrix-table td.col-left { text-align: left; }
-        .matrix-table tr:hover td { background: #f1f5f9; }
-        
-        /* Celda con tránsito */
-        .cell-transit { background-color: #fef08a !important; font-weight: bold; }
-        .sku-bold { font-weight: bold; color: #0f172a; }
-    </style>
+   
 <script>
     if (!localStorage.getItem('viggo_auth_token')) window.location.href = 'login.html';
 </script>
