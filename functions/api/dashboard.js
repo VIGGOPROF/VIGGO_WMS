@@ -1,46 +1,73 @@
 export async function onRequestGet(context) {
-  try {
-    const db = context.env.DB;
+  const { request, env } = context;
+  const db = env.DB;
+  const url = new URL(request.url);
+  const categoriesParam = url.searchParams.get('categories');
 
-    // 1. Obtenemos las columnas ordenadas según tu Catálogo
-    const { results: nodes } = await db.prepare(`
-        SELECT id, name FROM nodes 
-        ORDER BY display_order ASC
+  try {
+    let whereClause = "";
+    let params = [];
+
+    // Si el frontend envía categorías seleccionadas, armamos el filtro SQL
+    if (categoriesParam) {
+      const catArray = categoriesParam.split(',').map(c => c.trim()).filter(c => c);
+      if (catArray.length > 0) {
+        const placeholders = catArray.map(() => '?').join(',');
+        whereClause = `WHERE p.category IN (${placeholders})`;
+        params = catArray; // Inyectamos los valores de forma segura
+      }
+    }
+
+    // 1. Obtener Stock Agrupado por Categoría (Afectado por el filtro)
+    const catQuery = `
+      SELECT COALESCE(p.category, 'Sin Categoría') as category, SUM(i.quantity) as total_stock
+      FROM inventory i
+      JOIN products p ON i.product_id = p.id
+      ${whereClause}
+      GROUP BY p.category
+      ORDER BY total_stock DESC
+    `;
+    const { results: stockByCategory } = await db.prepare(catQuery).bind(...params).all();
+
+    // 2. Obtener la lista maestra de Categorías (Sin filtro, para armar los checkboxes)
+    const { results: allCategories } = await db.prepare(`
+      SELECT DISTINCT category 
+      FROM products 
+      WHERE category IS NOT NULL AND category != '' 
+      ORDER BY category ASC
     `).all();
 
-    // 2. Obtenemos el inventario y los tránsitos
-    const query = `
-        SELECT 
-            p.sku, 
-            p.name as product_name,
-            p.display_order,
-            i.node_id, 
-            i.quantity,
-            COALESCE((
-                SELECT SUM(ti.quantity) 
-                FROM transfer_items ti
-                JOIN transfers t ON ti.transfer_id = t.id
-                WHERE ti.product_id = p.id 
-                AND t.destination_node_id = i.node_id 
-                AND t.status = 'in_transit'
-            ), 0) as transit_qty
-        FROM products p
-        LEFT JOIN inventory i ON p.id = i.product_id
-        ORDER BY p.display_order ASC, p.sku ASC
+    // 3. Obtener Stock Agrupado por Nodos/Depósitos (Afectado por el filtro)
+    const nodeQuery = `
+      SELECT n.name as node_name, SUM(i.quantity) as total_stock
+      FROM inventory i
+      JOIN nodes n ON i.node_id = n.id
+      JOIN products p ON i.product_id = p.id
+      ${whereClause}
+      GROUP BY n.id
+      ORDER BY n.display_order ASC
     `;
-    
-    const { results: inventory } = await db.prepare(query).all();
+    const { results: stockByNode } = await db.prepare(nodeQuery).bind(...params).all();
 
-    // 3. EL ARREGLO: Entregamos los datos con los nombres exactos que espera script.js
-    return new Response(JSON.stringify({ 
-        status: "success", 
-        data: inventory,  // Tu web lee "data" para hacer el forEach de los productos
-        nodes: nodes      // Tu web lee "nodes" para hacer el forEach de las columnas
-    }), {
-        headers: { "Content-Type": "application/json" }
-    });
+    // 4. Obtener el Stock Total global (Afectado por el filtro)
+    const totalQuery = `
+      SELECT SUM(i.quantity) as total
+      FROM inventory i
+      JOIN products p ON i.product_id = p.id
+      ${whereClause}
+    `;
+    const totalStockResult = await db.prepare(totalQuery).bind(...params).first();
+
+    // Devolvemos todo el paquete al frontend
+    return new Response(JSON.stringify({
+      success: true,
+      stockByCategory,
+      allCategories: allCategories.map(c => c.category),
+      stockByNode,
+      totalStock: totalStockResult ? totalStockResult.total || 0 : 0
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), { status: 500 });
+    return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 }
