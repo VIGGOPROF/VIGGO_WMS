@@ -16,7 +16,7 @@
     
     <style>
         /* Estilos para el selector de pestañas (Tabs) */
-        .tab-container { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid var(--border); padding-bottom: 10px; }
+        .tab-container { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid var(--border); padding-bottom: 10px; flex-wrap: wrap; }
         .tab-btn { background: transparent; color: var(--text-muted); border: none; font-weight: 600; font-size: 1rem; padding: 10px 20px; cursor: pointer; transition: all 0.2s; box-shadow: none; border-radius: 8px 8px 0 0; }
         .tab-btn:hover { color: var(--primary); background: #f1f5f9; transform: none; box-shadow: none; }
         .tab-btn.active { color: var(--accent); border-bottom: 3px solid var(--accent); background: #eff6ff; }
@@ -31,6 +31,14 @@
         .upload-icon { font-size: 2.5rem; color: #94a3b8; margin-bottom: 10px; display: block; }
         #excel-file { display: none; }
         .file-info { display: none; align-items: center; gap: 10px; background: white; border: 1px solid var(--border); padding: 10px 15px; border-radius: 8px; font-weight: 500; margin-bottom: 15px; }
+
+        /* Tabla de OC */
+        .oc-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; background: white; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+        .oc-table th, .oc-table td { padding: 12px 15px; border-bottom: 1px solid var(--border); }
+        .oc-table th { background: #f1f5f9; color: var(--primary); font-weight: 700; text-align: left; }
+        .oc-table tr:last-child td { border-bottom: none; }
+        .oc-table input[type="number"] { width: 100px; padding: 6px; border: 1px solid #cbd5e1; border-radius: 4px; text-align: center; font-weight: bold; }
+        .oc-table input[type="number"]:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px rgba(37,99,235,0.1); }
     </style>
 </head>
 <body>
@@ -38,79 +46,116 @@
     <div id="sidebar-container"></div>
 
     <main class="main-content">
-        <div class="module-container" style="max-width: 900px;">
+        <div class="module-container" style="max-width: 950px;">
             <header>
                 <h2>Ingreso de Mercadería (Origen)</h2>
                 <p>Registra la producción terminada en la fábrica o consolida stock en el hub de exportación de China Central.</p>
             </header>
 
             <div style="background: #f8fafc; padding: 20px; border-radius: 10px; border: 1px solid var(--border); margin-bottom: 25px;">
-                <label style="margin-bottom: 8px; color: var(--primary);">🏢 Destino Físico del Ingreso:</label>
-                <select id="inbound-node" style="max-width: 400px; font-weight: 600;">
+                <label style="margin-bottom: 8px; color: var(--primary); font-weight: bold; display: block;">🏢 Destino Físico del Ingreso:</label>
+                <select id="inbound-node" style="max-width: 400px; font-weight: 600; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1; width: 100%;">
                     <option value="5">🏭 Depósito Fábrica (Producción)</option>
                     <option value="1">📦 China Central (Consolidación)</option>
                 </select>
             </div>
 
             <div class="tab-container">
-                <button class="tab-btn active" onclick="switchTab('manual', event)">✍️ Carga Manual</button>
+                <button class="tab-btn active" onclick="switchTab('oc', event)">📥 Desde Orden de Compra (OC)</button>
+                <button class="tab-btn" onclick="switchTab('manual', event)">✍️ Carga Manual Independiente</button>
                 <button class="tab-btn" onclick="switchTab('excel', event)">📑 Carga Masiva (Excel)</button>
             </div>
 
-            <div id="tab-manual" class="tab-content active">
+            <div id="tab-oc" class="tab-content active">
+                <div style="background: #eff6ff; border: 1px solid #bfdbfe; padding: 20px; border-radius: 8px; margin-bottom: 20px; display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
+                    <div style="flex: 1; min-width: 250px;">
+                        <label style="display: block; font-size: 0.85rem; font-weight: bold; color: #1e3a8a; margin-bottom: 5px;">Nº de Orden de Compra:</label>
+                        <input type="text" id="oc-search-input" placeholder="Ej: OC-2026-01" style="width: 100%; padding: 10px; border: 1px solid #93c5fd; border-radius: 6px; outline: none; font-weight: bold; text-transform: uppercase;">
+                    </div>
+                    <button id="btn-search-oc" style="background: #1d4ed8; color: white; border: none; padding: 10px 25px; border-radius: 6px; font-weight: bold; cursor: pointer; height: 40px; margin-top: auto;">
+                        🔍 Buscar OC
+                    </button>
+                </div>
+
+                <div id="oc-items-container" style="display: none;">
+                    <div style="overflow-x: auto; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 20px;">
+                        <table class="oc-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 40px; text-align: center;"><input type="checkbox" id="oc-select-all" checked></th>
+                                    <th>SKU</th>
+                                    <th>Producto</th>
+                                    <th style="text-align: center;">Pendiente</th>
+                                    <th style="text-align: right;">Cant. a Recibir</th>
+                                </tr>
+                            </thead>
+                            <tbody id="oc-items-tbody">
+                                </tbody>
+                        </table>
+                    </div>
+                    <div style="text-align: right;">
+                        <button id="btn-submit-oc-recv" style="background: #10b981; color: white; border: none; padding: 12px 30px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 1rem; box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.2);">
+                            ✅ Ingresar Artículos Seleccionados
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="tab-manual" class="tab-content">
+                <div style="background: #fffbeb; border-left: 4px solid #f59e0b; padding: 15px; margin-bottom: 20px; font-size: 0.85rem; color: #92400e;">
+                    <strong>Atención:</strong> Usar esta opción solo para ingresos de mercadería que <strong>NO</strong> provengan de una Orden de Compra previa.
+                </div>
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
                     <div class="form-group">
                         <label>SKU:</label>
-                        <input type="text" id="man-sku" placeholder="Ej: VIG-SHAV-01" autocomplete="off">
+                        <input type="text" id="man-sku" placeholder="Ej: VIG-SHAV-01" autocomplete="off" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px;">
                         <small id="sku-helper" style="color: var(--accent); font-weight: 600; font-size: 0.75rem; display: none; margin-top: 5px;">Buscando SKU...</small>
                     </div>
                     
                     <div class="form-group">
                         <label>Nombre del Producto:</label>
-                        <input type="text" id="man-name" placeholder="Ej: Shaver V-004">
+                        <input type="text" id="man-name" placeholder="Ej: Shaver V-004" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px;">
                     </div>
                     
                     <div class="form-group">
                         <label>Categoría:</label>
-                        <input type="text" id="man-cat" placeholder="Ej: Máquinas de Corte">
+                        <input type="text" id="man-cat" placeholder="Ej: Máquinas de Corte" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px;">
                     </div>
                     
                     <div class="form-group">
                         <label>Nombre de Fábrica:</label>
                         <div style="display: flex; gap: 10px;">
-                            <select id="man-fab" style="flex: 1;">
+                            <select id="man-fab" style="flex: 1; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px;">
                                 <option value="">Seleccione una fábrica...</option>
-                                </select>
-                            <button id="btn-add-factory" style="padding: 0 15px; background: white; color: var(--primary); border: 1px solid var(--border); box-shadow: none;" title="Añadir nueva fábrica">+</button>
+                            </select>
+                            <button id="btn-add-factory" style="padding: 0 15px; background: white; color: var(--primary); border: 1px solid var(--border); border-radius: 6px; cursor: pointer;" title="Añadir nueva fábrica">+</button>
                         </div>
                     </div>
                     
                     <div class="form-group">
                         <label>Cantidad Ingresada:</label>
-                        <input type="number" id="man-qty" placeholder="Ej: 1000" min="1">
+                        <input type="number" id="man-qty" placeholder="Ej: 1000" min="1" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px;">
                     </div>
                 </div>
                 
                 <div style="text-align: right; margin-top: 15px;">
-                    <button id="btn-submit-manual">➕ Ingresar Artículo</button>
+                    <button id="btn-submit-manual" style="background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 6px; font-weight: bold; cursor: pointer;">➕ Ingresar Artículo Suelto</button>
                 </div>
             </div>
 
             <div id="tab-excel" class="tab-content">
-                <div style="background: #eff6ff; border-left: 4px solid var(--accent); padding: 15px; margin-bottom: 20px; font-size: 0.9rem; color: var(--text-main);">
+                <div style="background: #f1f5f9; border-left: 4px solid #64748b; padding: 15px; margin-bottom: 20px; font-size: 0.9rem; color: var(--text-main);">
                     <strong>Columnas requeridas en la primera fila:</strong><br> 
-                    <code style="background: white; padding: 2px 5px; border-radius: 4px;">SKU</code> | 
-                    <code style="background: white; padding: 2px 5px; border-radius: 4px;">Nombre</code> | 
-                    <code style="background: white; padding: 2px 5px; border-radius: 4px;">Categoria</code> | 
-                    <code style="background: white; padding: 2px 5px; border-radius: 4px;">Fabrica</code> | 
-                    <code style="background: white; padding: 2px 5px; border-radius: 4px;">Cantidad</code>
-                    <br><br>
-                    <small style="color: var(--danger);">*Asegúrate de que la fábrica escrita en el Excel ya haya sido creada usando el botón "+" de la pestaña de Carga Manual.</small>
+                    <code style="background: white; padding: 2px 5px; border-radius: 4px; border: 1px solid #e2e8f0;">SKU</code> | 
+                    <code style="background: white; padding: 2px 5px; border-radius: 4px; border: 1px solid #e2e8f0;">Nombre</code> | 
+                    <code style="background: white; padding: 2px 5px; border-radius: 4px; border: 1px solid #e2e8f0;">Categoria</code> | 
+                    <code style="background: white; padding: 2px 5px; border-radius: 4px; border: 1px solid #e2e8f0;">Fabrica</code> | 
+                    <code style="background: white; padding: 2px 5px; border-radius: 4px; border: 1px solid #e2e8f0;">Cantidad</code>
                 </div>
                 
                 <label class="upload-area" id="drop-zone" for="excel-file">
                     <span class="upload-icon">📄</span>
-                    <div class="upload-text" style="color: var(--primary);">Arrastra tu archivo Excel aquí o haz clic para explorar</div>
+                    <div class="upload-text" style="color: var(--primary); font-weight: bold;">Arrastra tu archivo Excel aquí o haz clic para explorar</div>
                     <input type="file" id="excel-file" accept=".xlsx, .xls" />
                 </label>
                 
@@ -119,17 +164,16 @@
                 </div>
 
                 <div style="text-align: right; margin-top: 15px;">
-                    <button id="btn-submit-excel">🚀 Procesar Lote Excel</button>
+                    <button id="btn-submit-excel" style="background: #0f172a; color: white; border: none; padding: 12px 25px; border-radius: 6px; font-weight: bold; cursor: pointer;">🚀 Procesar Lote Excel</button>
                 </div>
             </div>
 
-            <div id="inbound-status" style="margin-top: 20px; font-weight: 500; font-size: 0.95rem; text-align: center; border-radius: 8px;"></div>
+            <div id="inbound-status" style="margin-top: 20px; font-weight: bold; font-size: 1rem; text-align: center; border-radius: 8px; padding: 10px;"></div>
         </div>
     </main>
 
     <script>
-        // Cambiar entre manual y excel
-        // Se añade el parámetro (event) para mayor compatibilidad de navegadores
+        // --- 1. NAVEGACIÓN DE TABS ---
         function switchTab(tabId, event) {
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
@@ -138,7 +182,122 @@
             document.getElementById('inbound-status').innerHTML = ''; 
         }
 
-        // Lógica visual del Drag & Drop
+        // --- 2. LÓGICA: DESDE ORDEN DE COMPRA ---
+        let currentOcItems = [];
+
+        document.getElementById('btn-search-oc').addEventListener('click', async () => {
+            const ocNumber = document.getElementById('oc-search-input').value.trim().toLowerCase();
+            const statusBox = document.getElementById('inbound-status');
+            const container = document.getElementById('oc-items-container');
+            const tbody = document.getElementById('oc-items-tbody');
+
+            if (!ocNumber) {
+                statusBox.innerHTML = '⚠️ <span style="color: #d97706;">Ingresa un número de OC.</span>';
+                return;
+            }
+
+            statusBox.innerHTML = '⏳ <span style="color: #475569;">Buscando Orden de Compra en la base de datos...</span>';
+            container.style.display = 'none';
+
+            try {
+                // Buscamos todas las compras y filtramos localmente
+                const res = await fetch('/api/purchases');
+                const result = await res.json();
+
+                if (res.ok && result.data) {
+                    // Filtramos por la OC exacta y que tengan saldo pendiente
+                    currentOcItems = result.data.filter(item => item.oc_number.toLowerCase() === ocNumber && item.pending_qty > 0);
+
+                    if (currentOcItems.length === 0) {
+                        statusBox.innerHTML = `⚠️ <span style="color: #d97706;">No se encontró la Orden "${ocNumber.toUpperCase()}" o ya fue recibida en su totalidad.</span>`;
+                        return;
+                    }
+
+                    // Armar la tabla
+                    tbody.innerHTML = currentOcItems.map((item, index) => `
+                        <tr>
+                            <td style="text-align: center;">
+                                <input type="checkbox" class="oc-item-checkbox" data-index="${index}" style="width: 18px; height: 18px; cursor: pointer;" checked>
+                            </td>
+                            <td><strong style="color: #0f172a;">${item.sku}</strong></td>
+                            <td style="color: #475569;">${item.product_name}</td>
+                            <td style="text-align: center; color: #d97706; font-weight: bold; font-size: 1.1rem;">${item.pending_qty}</td>
+                            <td style="text-align: right;">
+                                <input type="number" class="oc-item-qty" id="oc-qty-${index}" value="${item.pending_qty}" max="${item.pending_qty}" min="1">
+                            </td>
+                        </tr>
+                    `).join('');
+
+                    container.style.display = 'block';
+                    statusBox.innerHTML = '';
+                } else {
+                    statusBox.innerHTML = '❌ Error al buscar la OC en el servidor.';
+                }
+            } catch (err) {
+                statusBox.innerHTML = '❌ Error de red. Verifica tu conexión.';
+            }
+        });
+
+        // Botón "Seleccionar Todos"
+        document.getElementById('oc-select-all').addEventListener('change', (e) => {
+            document.querySelectorAll('.oc-item-checkbox').forEach(cb => cb.checked = e.target.checked);
+        });
+
+        // Confirmar el ingreso de la OC
+        document.getElementById('btn-submit-oc-recv').addEventListener('click', async () => {
+            const nodeId = document.getElementById('inbound-node').value;
+            const statusBox = document.getElementById('inbound-status');
+            const btn = document.getElementById('btn-submit-oc-recv');
+
+            if (!nodeId) return alert("Sube a la parte superior y selecciona el Destino Físico (Depósito).");
+
+            const selectedCheckboxes = Array.from(document.querySelectorAll('.oc-item-checkbox:checked'));
+            if (selectedCheckboxes.length === 0) return alert("Selecciona al menos un artículo marcando la casilla de la izquierda.");
+
+            btn.disabled = true;
+            btn.innerText = '⏳ Impactando stock...';
+            statusBox.innerHTML = '⏳ <span style="color: #475569;">Guardando ingresos y actualizando OC...</span>';
+
+            let successCount = 0;
+            let errorCount = 0;
+
+            // Procesamos los ingresos usando la API nativa de compras (la misma del módulo Compras)
+            for (let cb of selectedCheckboxes) {
+                const idx = cb.getAttribute('data-index');
+                const item = currentOcItems[idx];
+                const qtyToReceive = parseInt(document.getElementById(`oc-qty-${idx}`).value, 10);
+
+                if (qtyToReceive > 0 && qtyToReceive <= item.pending_qty) {
+                    try {
+                        const res = await fetch('/api/purchases_receive', {
+                            method: 'POST',
+                            body: JSON.stringify({
+                                oc_number: item.oc_number,
+                                sku: item.sku,
+                                qty_received: qtyToReceive,
+                                node_id: nodeId
+                            }),
+                            headers: { 'Content-Type': 'application/json' }
+                        });
+                        if (res.ok) successCount++;
+                        else errorCount++;
+                    } catch (e) { errorCount++; }
+                }
+            }
+
+            if (errorCount === 0) {
+                statusBox.innerHTML = `✅ <span style="color: #10b981;">¡Éxito! Se ingresaron ${successCount} artículos de la OC. El stock ha sido actualizado.</span>`;
+                document.getElementById('oc-items-container').style.display = 'none';
+                document.getElementById('oc-search-input').value = '';
+            } else {
+                statusBox.innerHTML = `⚠️ <span style="color: #d97706;">Atención: Se ingresaron ${successCount} artículos, pero fallaron ${errorCount}. Revisa el módulo de Compras.</span>`;
+            }
+
+            btn.disabled = false;
+            btn.innerText = '✅ Ingresar Artículos Seleccionados';
+        });
+
+        // --- 3. LÓGICA VISUAL DEL DRAG & DROP (Pestaña Excel) ---
         const dropZone = document.getElementById('drop-zone');
         const fileInput = document.getElementById('excel-file');
         const fileInfo = document.getElementById('file-info');
