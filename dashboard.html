@@ -214,7 +214,7 @@
             renderTableRows(filteredItems);
         }
 
-        // 4. Dibujar las filas resultantes
+       // 4. Dibujar las filas resultantes
         function renderTableRows(items) {
             const tbody = document.getElementById('matrix-body');
             
@@ -225,14 +225,16 @@
 
             let rowsHtml = '';
             items.forEach(item => {
-                let rowHtml = `<tr><td class="col-left sku-bold">${item.sku}</td><td class="col-left">${item.name}</td>`;
+                // AQUÍ ESTÁ LA LÍNEA NUEVA DEL NOMBRE ACORTADO
+                let rowHtml = `<tr><td class="col-left sku-bold">${item.sku}</td><td class="col-left" title="${item.name}">${item.name}</td>`;
                 
+                // ESTE ES EL BUCLE QUE SE HABÍA BORRADO (El que dibuja los números)
                 globalNodes.forEach(node => {
                     const stockData = item.stock[node.id] || { quantity: 0, transit: 0 };
                     const cellClass = stockData.transit > 0 ? 'cell-transit' : '';
                     const tooltip = stockData.transit > 0 ? `title="Físico: ${stockData.quantity} | En camino: ${stockData.transit}"` : '';
                     
-                    let rowHtml = `<tr><td class="col-left sku-bold">${item.sku}</td><td class="col-left" title="${item.name}">${item.name}</td>`;
+                    rowHtml += `<td class="${cellClass}" ${tooltip}>${stockData.quantity}</td>`;
                 });
                 
                 rowHtml += `</tr>`;
@@ -241,7 +243,6 @@
 
             tbody.innerHTML = rowsHtml;
         }
-
         // 5. Exportar a Excel
         function exportToExcel() {
             const table = document.getElementById("matrix-table");
