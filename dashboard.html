@@ -76,7 +76,7 @@
                         <input type="checkbox" id="transit-toggle" onchange="applyLocalFilters()">
                         🚚 Solo Tránsito
                     </label>
-                    <button class="btn-excel" onclick="exportToExcel()">📊 Exportar a Excel</button>
+                    <button class="btn-excel" onclick="exportMatrixToExcel()">📊 Exportar a Excel</button>
                     <button class="btn-update" onclick="loadMatrixData()">🔄 Actualizar</button>
                 </div>
             </div>
@@ -244,11 +244,11 @@
             tbody.innerHTML = rowsHtml;
         }
         // 5. Exportar a Excel
-        function exportToExcel() {
-            const table = document.getElementById("matrix-table");
-            const wb = XLSX.utils.table_to_book(table, { sheet: "Inventario Matricial" });
-            XLSX.writeFile(wb, `Inventario_Global_${new Date().toISOString().split('T')[0]}.xlsx`);
-        }
+function exportMatrixToExcel() {
+    const table = document.getElementById("matrix-table");
+    const wb = XLSX.utils.table_to_book(table, { sheet: "Inventario Matricial" });
+    XLSX.writeFile(wb, `Inventario_Global_${new Date().toISOString().split('T')[0]}.xlsx`);
+}
 
         // Arranque
         document.addEventListener("DOMContentLoaded", () => {
