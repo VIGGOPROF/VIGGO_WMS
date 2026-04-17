@@ -232,7 +232,7 @@
                     const cellClass = stockData.transit > 0 ? 'cell-transit' : '';
                     const tooltip = stockData.transit > 0 ? `title="Físico: ${stockData.quantity} | En camino: ${stockData.transit}"` : '';
                     
-                    rowHtml += `<td class="${cellClass}" ${tooltip}>${stockData.quantity}</td>`;
+                    let rowHtml = `<tr><td class="col-left sku-bold">${item.sku}</td><td class="col-left" title="${item.name}">${item.name}</td>`;
                 });
                 
                 rowHtml += `</tr>`;
