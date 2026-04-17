@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cuentas Corrientes | Micro SaaS</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    .app { display: grid !important; grid-template-columns: 260px 1fr !important; min-height: 100vh; width: 100vw; overflow-x: hidden; }
+    .sidebar { width: 260px !important; height: 100vh; position: sticky; top: 0; background: #0f172a; }
+    .layout-cc { display: grid; grid-template-columns: 350px 1fr; gap: 20px; align-items: start; }
+    @media (max-width: 1000px) { .layout-cc { grid-template-columns: 1fr; } }
+    .input-box { background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 10px; width: 100%; font-family: inherit; font-size: 14px; outline: none; box-sizing: border-box; }
+    .input-box:focus { border-color: var(--primary); }
+    table { width: 100%; border-collapse: collapse; text-align: left; }
+    th { padding: 12px 15px; font-size: 11px; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--line); }
+    td { padding: 12px 15px; border-bottom: 1px solid var(--line); font-size: 14px; vertical-align: middle; }
+    
+    .client-list-item { padding: 15px; border-bottom: 1px solid var(--line); cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: 0.2s; }
+    .client-list-item:hover { background: var(--panel-2); }
+    .client-list-item.selected { border-left: 4px solid var(--primary); background: var(--primary-soft); }
+    
+    .ledger-debe { color: var(--danger); font-weight: bold; }
+    .ledger-haber { color: var(--success); font-weight: bold; }
+    
+    dialog::backdrop { background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(3px); }
+    dialog { border: none; border-radius: 12px; box-shadow: var(--shadow-lg); padding: 0; margin: auto; }
+    .modal-content { padding: 24px; background: #fff; width: 100%; box-sizing: border-box; }
+  </style>
+</head>
+<body>
+
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-logo">M</div>
+      <div class="brand-text"><strong>Usuario: Admin</strong><small>Control del negocio</small></div>
+    </div>
+    <nav class="nav">
+      <a href="dashboard.html"><span class="nav-icon">📊</span> Dashboard</a>
+      <a href="producto.html"><span class="nav-icon">📦</span> Productos</a>
+      <a href="clientes.html"><span class="nav-icon">🏢</span> Clientes</a>
+      <a href="facturacion.html"><span class="nav-icon">🛒</span> Facturación</a>
+      <a href="ventas.html"><span class="nav-icon">🧾</span> Ventas - Cierre de Caja</a>
+      <a href="cc.html" class="active"><span class="nav-icon">📓</span> Cuentas Corrientes</a>
+      <a href="contable.html"><span class="nav-icon">💸</span> Contable</a>
+      <a href="stock.html"><span class="nav-icon">📚</span> Stock</a>
+      <a href="usuarios.html"><span class="nav-icon">👥</span> Usuarios</a>
+    </nav>
+  </aside>
+
+  <main class="content">
+    <header class="topbar">
+      <div class="page-title">
+        <h1 style="margin:0; font-size: 26px;">Cuentas Corrientes</h1>
+        <p style="margin:6px 0 0; color:var(--muted); font-size:14px;">Seguimiento de deudas y cobranzas de clientes B2B.</p>
+      </div>
+    </header>
+
+    <div class="layout-cc">
+      <article class="card" style="overflow: hidden;">
+        <div style="padding: 20px; border-bottom: 1px solid var(--line); background: var(--panel-2);">
+          <input type="text" id="searchCli" class="input-box" placeholder="Buscar cliente..." onkeyup="renderClientList()">
+        </div>
+        <div id="clientList" style="max-height: 65vh; overflow-y: auto;">
+          </div>
+      </article>
+
+      <article class="card card-pad" id="ledgerPanel" style="display: none;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
+          <div>
+            <h2 style="margin: 0 0 5px 0; font-size: 22px;" id="lblCliName">Nombre Cliente</h2>
+            <p style="color: var(--muted); font-size: 13px; margin:0;" id="lblCliInfo">CUIT / Tipo</p>
+          </div>
+          <div style="text-align: right; background: var(--panel-2); padding: 15px; border-radius: 8px; border: 1px solid var(--line);">
+            <div style="font-size: 11px; text-transform: uppercase; color: var(--muted); font-weight: bold;">Saldo Deudor</div>
+            <div id="lblCliBalance" style="font-size: 24px; font-weight: 900; color: var(--danger);">$0.00</div>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+          <button class="btn btn-primary" onclick="abrirModalMovimiento('haber')">⬇ Ingresar Pago (Cobranza)</button>
+          <button class="btn btn-outline" style="border-color: var(--danger); color: var(--danger);" onclick="abrirModalMovimiento('debe')">⬆ Cargar Deuda Manual</button>
+        </div>
+
+        <div style="overflow-x: auto; border: 1px solid var(--line); border-radius: 8px;">
+          <table>
+            <thead style="background: var(--panel-2);">
+              <tr>
+                <th>Fecha</th>
+                <th>Concepto</th>
+                <th style="text-align: right;">Debe (Cargo)</th>
+                <th style="text-align: right;">Haber (Pago)</th>
+              </tr>
+            </thead>
+            <tbody id="ledgerBody"></tbody>
+          </table>
+        </div>
+      </article>
+      
+      <article class="card card-pad" id="emptyPanel" style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 50vh; color: var(--muted);">
+        <div style="font-size: 40px; margin-bottom: 10px;">📓</div>
+        <h3>Seleccioná un cliente</h3>
+        <p style="font-size: 14px;">Elegí un cliente de la lista para ver su cuenta corriente.</p>
+      </article>
+    </div>
+  </main>
+</div>
+
+<dialog id="modalMov" style="width: 100%; max-width: 400px;">
+  <div class="modal-content">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--line); padding-bottom: 15px;">
+      <h2 style="margin: 0; font-size:18px;" id="modalTitle">Nuevo Movimiento</h2>
+      <button type="button" class="btn btn-light" style="padding: 6px 12px; border:none;" onclick="cerrarModalMov()">✕</button>
+    </div>
+    <form onsubmit="guardarMovimiento(event)">
+      <input type="hidden" id="movType">
+      <div style="margin-bottom: 15px;">
+        <label style="font-size: 12px; font-weight: bold; color: var(--muted);">Monto ($) *</label>
+        <input type="number" id="movAmount" required min="1" step="0.01" class="input-box" autofocus>
+      </div>
+      <div style="margin-bottom: 20px;">
+        <label style="font-size: 12px; font-weight: bold; color: var(--muted);">Concepto / Referencia *</label>
+        <input type="text" id="movConcept" required class="input-box" placeholder="Ej: Pago en efectivo / Ajuste saldo">
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 10px;">
+        <button type="button" class="btn btn-light" onclick="cerrarModalMov()">Cancelar</button>
+        <button type="submit" class="btn btn-primary" id="btnSaveMov">Guardar</button>
+      </div>
+    </form>
+  </div>
+</dialog>
+
+<script src="core.js"></script>
+<script>
+  let dbClients = [];
+  let dbCcMovements = []; // Array universal para deudas y pagos manuales
+  let selectedClientId = null;
+
+  function currency(n) { return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(n || 0); }
+  function escapeHtml(v) { return String(v ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function todayISO() { return new Date().toISOString().split('T')[0]; }
+
+  function initCC() {
+    const keyCli = (typeof KEYS !== 'undefined' && KEYS.clients) ? KEYS.clients : 'saas_clients';
+    const keyCc = (typeof KEYS !== 'undefined' && KEYS.cc_movements) ? KEYS.cc_movements : 'saas_cc_movements';
+    
+    dbClients = getData(keyCli, []);
+    dbCcMovements = getData(keyCc, []);
+    renderClientList();
+  }
+
+  // --- CÁLCULO DE SALDOS ---
+  function getClientBalance(clientId) {
+    // Acá en el futuro también vamos a sumar las VENTAS (Facturación) que digan "Cuenta Corriente"
+    // Por ahora, procesa los movimientos manuales.
+    let saldo = 0;
+    const movs = dbCcMovements.filter(m => m.clientId === clientId);
+    movs.forEach(m => {
+      if (m.type === 'debe') saldo += m.amount;
+      if (m.type === 'haber') saldo -= m.amount;
+    });
+    return saldo; // Si es Positivo, el cliente debe plata.
+  }
+
+  // --- RENDERIZADO ---
+  function renderClientList() {
+    const term = document.getElementById('searchCli').value.toLowerCase();
+    const filtrados = dbClients.filter(c => c.name.toLowerCase().includes(term));
+    const listDiv = document.getElementById('clientList');
+    
+    listDiv.innerHTML = filtrados.map(c => {
+      const saldo = getClientBalance(c.id);
+      const isSelected = selectedClientId === c.id ? 'selected' : '';
+      const colorSaldo = saldo > 0 ? 'var(--danger)' : (saldo < 0 ? 'var(--success)' : 'var(--muted)');
+      
+      return `
+      <div class="client-list-item ${isSelected}" onclick="seleccionarCliente('${c.id}')">
+        <div>
+          <strong style="display:block; font-size:14px; color:var(--text);">${escapeHtml(c.name)}</strong>
+          <span style="font-size:11px; color:var(--muted);">${c.type}</span>
+        </div>
+        <div style="text-align:right;">
+          <strong style="color:${colorSaldo}; font-size:15px;">${currency(saldo)}</strong>
+        </div>
+      </div>`;
+    }).join('');
+    
+    if(filtrados.length === 0) listDiv.innerHTML = '<div style="padding:20px; text-align:center; color:var(--muted); font-size:13px;">No hay clientes. Cargalos en el módulo Clientes.</div>';
+  }
+
+  function seleccionarCliente(id) {
+    selectedClientId = id;
+    renderClientList(); // Para repintar el color de selección
+    
+    const c = dbClients.find(x => x.id === id);
+    if (!c) return;
+
+    document.getElementById('emptyPanel').style.display = 'none';
+    document.getElementById('ledgerPanel').style.display = 'block';
+    
+    document.getElementById('lblCliName').textContent = c.name;
+    document.getElementById('lblCliInfo').textContent = `${c.cuit ? 'CUIT: '+c.cuit : 'Sin CUIT'} - ${c.type}`;
+    
+    renderLedger();
+  }
+
+  function renderLedger() {
+    if (!selectedClientId) return;
+    
+    const tbody = document.getElementById('ledgerBody');
+    const movs = dbCcMovements.filter(m => m.clientId === selectedClientId).sort((a,b) => new Date(b.date) - new Date(a.date));
+    
+    let html = '';
+    movs.forEach(m => {
+      const isDebe = m.type === 'debe';
+      const isHaber = m.type === 'haber';
+      const formatDate = m.date.split('-').reverse().join('/');
+      
+      html += `
+      <tr>
+        <td style="color:var(--muted); font-size:12px;">${formatDate}</td>
+        <td><strong>${escapeHtml(m.concept)}</strong></td>
+        <td style="text-align:right;" class="${isDebe ? 'ledger-debe' : ''}">${isDebe ? currency(m.amount) : '-'}</td>
+        <td style="text-align:right;" class="${isHaber ? 'ledger-haber' : ''}">${isHaber ? currency(m.amount) : '-'}</td>
+      </tr>`;
+    });
+    
+    if (movs.length === 0) html = '<tr><td colspan="4" style="text-align:center; padding:30px; color:var(--muted);">Sin movimientos en la cuenta.</td></tr>';
+    
+    tbody.innerHTML = html;
+    
+    // Actualizar Cartel Principal de Saldo
+    const saldoFinal = getClientBalance(selectedClientId);
+    const boxSaldo = document.getElementById('lblCliBalance');
+    boxSaldo.textContent = currency(saldoFinal);
+    boxSaldo.style.color = saldoFinal > 0 ? 'var(--danger)' : (saldoFinal < 0 ? 'var(--success)' : 'var(--text)');
+  }
+
+  // --- MODAL MOVIMIENTOS ---
+  function abrirModalMovimiento(tipo) {
+    if(!selectedClientId) return;
+    document.getElementById('movType').value = tipo;
+    document.getElementById('movAmount').value = '';
+    document.getElementById('movConcept').value = tipo === 'haber' ? 'Pago recibido' : 'Cargo manual a cuenta';
+    
+    document.getElementById('modalTitle').textContent = tipo === 'haber' ? 'Ingresar Cobranza' : 'Cargar Deuda';
+    document.getElementById('btnSaveMov').style.background = tipo === 'haber' ? 'var(--success)' : 'var(--danger)';
+    
+    document.getElementById('modalMov').showModal();
+  }
+
+  function cerrarModalMov() { document.getElementById('modalMov').close(); }
+
+  function guardarMovimiento(e) {
+    e.preventDefault();
+    if(!selectedClientId) return;
+    
+    const mov = {
+      id: 'cc_' + Date.now(),
+      clientId: selectedClientId,
+      date: todayISO(),
+      type: document.getElementById('movType').value,
+      amount: parseFloat(document.getElementById('movAmount').value),
+      concept: document.getElementById('movConcept').value.trim()
+    };
+    
+    dbCcMovements.unshift(mov);
+    const keyCc = (typeof KEYS !== 'undefined' && KEYS.cc_movements) ? KEYS.cc_movements : 'saas_cc_movements';
+    setData(keyCc, dbCcMovements);
+    
+    cerrarModalMov();
+    renderClientList(); // Actualiza los numeritos de la izquierda
+    renderLedger();     // Actualiza la tabla de la derecha
+  }
+
+  initCC();
+</script>
+</body>
+</html>
