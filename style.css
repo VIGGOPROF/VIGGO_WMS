@@ -465,3 +465,14 @@ table td, .matrix-table td, .inventory-table td, .list-entry {
     padding: 6px 12px !important;
     font-size: 0.8rem !important;
 }
+
+/* =========================================
+   AJUSTES MATRIZ: COLUMNA PRODUCTO
+========================================= */
+.matrix-table th:nth-child(2),
+.matrix-table td:nth-child(2) {
+    max-width: 280px; /* Puedes bajar a 200px si la quieres aún más chica */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
