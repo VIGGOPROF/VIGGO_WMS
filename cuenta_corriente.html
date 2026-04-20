@@ -7,37 +7,37 @@
     <link rel="stylesheet" href="style.css">
     <script>if (!localStorage.getItem('viggo_auth_token')) window.location.href = 'login.html';</script>
     <style>
-        .cc-controls { background: #f8fafc; border: 1px solid var(--border); padding: 20px; border-radius: 10px; margin-bottom: 20px; display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap; }
+        .cc-controls { background: #f8fafc; border: 1px solid var(--border); padding: 15px; border-radius: 6px; margin-bottom: 15px; display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap; }
         
-        .cc-header { display: flex; justify-content: space-between; align-items: flex-end; background: white; padding: 25px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 20px; }
-        .cc-client-info h2 { margin: 0 0 5px 0; color: #0f172a; font-size: 1.8rem; }
-        .cc-client-info p { margin: 0; color: #64748b; font-size: 0.95rem; }
+        .cc-header { display: flex; justify-content: space-between; align-items: flex-end; background: white; padding: 20px; border-radius: 6px; border: 1px solid var(--border); margin-bottom: 15px; }
+        .cc-client-info h2 { margin: 0 0 5px 0; color: #0f172a; font-size: 1.5rem; }
+        .cc-client-info p { margin: 0; color: #64748b; font-size: 0.85rem; }
         .cc-balance-box { text-align: right; }
-        .cc-balance-box p { margin: 0 0 5px 0; font-weight: bold; text-transform: uppercase; font-size: 0.8rem; color: #64748b; }
-        .cc-balance-box h1 { margin: 0; font-size: 2.5rem; }
+        .cc-balance-box p { margin: 0 0 2px 0; font-weight: bold; text-transform: uppercase; font-size: 0.75rem; color: #64748b; }
+        .cc-balance-box h1 { margin: 0; font-size: 2rem; }
         .balance-deuda { color: #ef4444; }
         .balance-favor { color: #10b981; }
         
-        .cc-table th { background: #0f172a; color: white; padding: 12px 10px; text-align: left; font-size: 0.85rem; }
-        .cc-table td { padding: 12px 10px; border-bottom: 1px solid #e2e8f0; font-size: 0.9rem; }
+        .cc-table th { background: #0f172a; color: white; padding: 8px 10px; text-align: left; font-size: 0.75rem; }
+        .cc-table td { padding: 8px 10px; border-bottom: 1px solid #e2e8f0; font-size: 0.8rem; }
         .tx-venta { color: #ef4444; font-weight: bold; } 
         .tx-pago { color: #10b981; font-weight: bold; } 
 
-        .btn-pay { background: #0369a1; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; margin-top: 10px; transition: 0.2s; display: inline-flex; align-items: center; gap: 8px;}
+        .btn-pay { background: #0369a1; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; margin-top: 10px; transition: 0.2s; display: inline-flex; align-items: center; gap: 8px; font-size: 0.8rem;}
         .btn-pay:hover { background: #0284c7; }
         
-        .btn-export { background: #f1f5f9; color: #0f172a; border: 1px solid #cbd5e1; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 5px;}
+        .btn-export { background: #f1f5f9; color: #0f172a; border: 1px solid #cbd5e1; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 5px;}
         .btn-export:hover { background: #e2e8f0; }
 
         /* Estilos de Modal */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; }
-        .modal { background: white; padding: 25px; border-radius: 12px; width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
-        .input-group { margin-bottom: 15px; }
-        .input-group label { display: block; font-size: 0.85rem; font-weight: bold; margin-bottom: 5px; color: #475569; }
-        .input-group input, .input-group textarea { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; }
-        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
-        .btn-cancel { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-weight:bold;}
-        .btn-confirm { background: #10b981; color: white; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        .modal { background: white; padding: 20px; border-radius: 8px; width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+        .input-group { margin-bottom: 12px; }
+        .input-group label { display: block; font-size: 0.8rem; font-weight: bold; margin-bottom: 4px; color: #475569; }
+        .input-group input, .input-group textarea { width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box; font-size: 0.8rem;}
+        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px; }
+        .btn-cancel { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight:bold; font-size: 0.8rem;}
+        .btn-confirm { background: #10b981; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.8rem;}
     </style>
 </head>
 <body>
@@ -46,26 +46,26 @@
 
     <main class="main-content">
         <div class="module-container">
-            <header style="margin-bottom: 20px;">
+            <header style="margin-bottom: 15px;">
                 <h2>Cuentas Corrientes y Cobranzas</h2>
                 <p style="color: #64748b; margin-top: 5px;">Consulta los estados de cuenta, descarga reportes y registra pagos recibidos.</p>
             </header>
 
             <div class="cc-controls">
                 <div style="flex: 1; min-width: 300px;">
-                    <label style="display: block; font-size: 0.85rem; font-weight: bold; color: #475569; margin-bottom: 5px;">Seleccionar Cliente a Consultar:</label>
-                    <select id="client-search-select" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 1rem;">
+                    <label style="display: block; font-size: 0.8rem; font-weight: bold; color: #475569; margin-bottom: 5px;">Seleccionar Cliente a Consultar:</label>
+                    <select id="client-search-select" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #cbd5e1; font-size: 0.85rem;">
                         <option value="">Cargando directorio de clientes...</option>
                     </select>
                 </div>
-                <button id="btn-export-all" class="btn-export" style="height: 40px; background: #10b981; color: white; border: none;">
+                <button id="btn-export-all" class="btn-export" style="height: 33px; background: #10b981; color: white; border: none;">
                     📊 Descargar Saldos Globales (Excel)
                 </button>
             </div>
 
-            <div id="empty-state" style="text-align: center; padding: 60px 20px; background: white; border: 1px dashed #cbd5e1; border-radius: 8px;">
-                <span style="font-size: 3rem;">🧾</span>
-                <p style="color: #64748b; font-size: 1.1rem; margin-top: 15px;">Selecciona un cliente en la barra superior para ver su estado de cuenta.</p>
+            <div id="empty-state" style="text-align: center; padding: 60px 20px; background: white; border: 1px dashed #cbd5e1; border-radius: 6px;">
+                <span style="font-size: 2.5rem;">🧾</span>
+                <p style="color: #64748b; font-size: 0.95rem; margin-top: 10px;">Selecciona un cliente en la barra superior para ver su estado de cuenta.</p>
             </div>
 
             <div id="account-workspace" style="display: none;">
@@ -75,7 +75,7 @@
                         <p id="view-client-tax">CUIT/RUT: -</p>
                         <p id="view-client-node" style="margin-bottom: 15px;">Sede: -</p>
                         
-                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
                             <button class="btn-pay" onclick="openPaymentModal()">💸 Registrar Pago</button>
                             <button class="btn-export" onclick="exportStatementPDF()">📄 PDF Estado de Cuenta</button>
                             <button class="btn-export" onclick="exportStatementExcel()">📊 CSV Detalle</button>
@@ -87,7 +87,7 @@
                     </div>
                 </div>
 
-                <div style="background: white; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; overflow-x: auto;">
+                <div style="background: white; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; overflow-x: auto;">
                     <table class="cc-table" style="width: 100%; border-collapse: collapse; min-width: 800px;">
                         <thead>
                             <tr>
@@ -127,7 +127,7 @@
                     <textarea id="pay-notes" rows="2" placeholder="Ej: Pago parcial correspondiente a factura 001..."></textarea>
                 </div>
 
-                <div id="pay-status" style="font-size: 0.85rem; font-weight: bold; text-align: center; margin-bottom: 10px;"></div>
+                <div id="pay-status" style="font-size: 0.8rem; font-weight: bold; text-align: center; margin-bottom: 10px;"></div>
 
                 <div class="modal-actions">
                     <button type="button" class="btn-cancel" onclick="closePaymentModal()">Cancelar</button>
@@ -145,19 +145,18 @@
         document.addEventListener("DOMContentLoaded", async () => {
             await loadClientDirectory();
             
-            // ¿Venimos redirigidos desde el directorio de clientes con un ID en la URL?
+            // Redirección desde directorio
             const urlParams = new URLSearchParams(window.location.search);
             const urlClientId = urlParams.get('client_id');
             
             if (urlClientId) {
                 const select = document.getElementById('client-search-select');
                 select.value = urlClientId;
-                if(select.value !== "") { // Si el ID existe en la lista
+                if(select.value !== "") { 
                     loadAccount(urlClientId);
                 }
             }
 
-            // Al cambiar de cliente en el menú desplegable
             document.getElementById('client-search-select').addEventListener('change', (e) => {
                 const clientId = e.target.value;
                 if (clientId) {
@@ -175,7 +174,6 @@
             try { return JSON.parse(atob(token)).id; } catch (e) { return null; }
         };
 
-        // 1. Cargar el desplegable de clientes y el botón Global
         const loadClientDirectory = async () => {
             const select = document.getElementById('client-search-select');
             try {
@@ -186,7 +184,6 @@
                     currentClientsList = result.data;
                     select.innerHTML = '<option value="">🔍 Buscar y seleccionar un cliente...</option>';
                     
-                    // Ordenar alfabéticamente para que sea más fácil buscar
                     const sorted = currentClientsList.sort((a,b) => a.business_name.localeCompare(b.business_name));
                     
                     sorted.forEach(c => {
@@ -198,7 +195,6 @@
             }
         };
 
-        // 2. Cargar datos específicos del cliente seleccionado
         const loadAccount = async (clientId) => {
             document.getElementById('empty-state').style.display = 'none';
             document.getElementById('account-workspace').style.display = 'block';
@@ -227,7 +223,6 @@
             document.getElementById('view-client-tax').innerText = `CUIT/RUT: ${client.tax_id}`;
             document.getElementById('view-client-node').innerText = `Sede (País): ${client.node_name}`;
 
-            // Calcular saldo total
             const totalBalance = transactions.reduce((acc, tx) => acc + tx.amount, 0);
             const balanceEl = document.getElementById('view-client-balance');
             
@@ -249,7 +244,7 @@
             let html = '';
             let runningBalance = 0;
 
-            transactions.forEach(tx => {
+            transactions.forEach((tx, index) => {
                 runningBalance += tx.amount; 
                 
                 const date = new Date(tx.created_at).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' });
@@ -259,11 +254,15 @@
                 const abono = !isSale ? `$${Math.abs(tx.amount).toFixed(2)}` : '';
                 const formatBalance = runningBalance < 0 ? `-$${Math.abs(runningBalance).toFixed(2)}` : `$${runningBalance.toFixed(2)}`;
 
+                const refDocHtml = tx.reference_doc 
+                    ? `<span onclick="viewTransactionPDF(${index})" style="color: #0284c7; text-decoration: underline; cursor: pointer;" title="Ver Comprobante PDF"><strong>${tx.reference_doc}</strong></span>` 
+                    : '<strong>-</strong>';
+
                 html += `
                     <tr>
                         <td>${date}</td>
                         <td class="${isSale ? 'tx-venta' : 'tx-pago'}">${tx.transaction_type}</td>
-                        <td><strong>${tx.reference_doc || '-'}</strong></td>
+                        <td>${refDocHtml}</td>
                         <td style="font-size: 0.8rem; color:#64748b;">${tx.notes || '-'}</td>
                         <td style="text-align: right; color:#ef4444;">${cargo}</td>
                         <td style="text-align: right; color:#10b981;">${abono}</td>
@@ -279,6 +278,65 @@
         // EXPORTACIONES A PDF Y EXCEL
         // ==========================================
 
+        window.viewTransactionPDF = (index) => {
+            const tx = currentTransactions[index];
+            if (!tx || !activeClientData) return;
+
+            const printWindow = window.open('', '_blank');
+            const date = new Date(tx.created_at).toLocaleString('es-ES');
+            const isSale = tx.transaction_type === 'VENTA';
+            const totalText = isSale ? `TOTAL CARGO: $${tx.amount.toFixed(2)}` : `TOTAL ABONO: $${Math.abs(tx.amount).toFixed(2)}`;
+            const title = isSale ? 'COMPROBANTE DE VENTA / CARGO' : 'RECIBO DE PAGO / ABONO';
+
+            printWindow.document.write(`
+                <html>
+                <head>
+                    <title>Documento ${tx.reference_doc}</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; padding: 40px; color: #333; }
+                        .header { border-bottom: 2px solid #0f172a; padding-bottom: 20px; margin-bottom: 30px; display:flex; justify-content: space-between;}
+                        .info-box { background: #f8fafc; padding: 15px; border-radius: 6px; margin-bottom: 30px; border: 1px solid #e2e8f0; font-size:14px; }
+                        .details { width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size:14px; }
+                        .details th { background: #f1f5f9; padding: 10px; text-align: left; border-bottom: 2px solid #cbd5e1; }
+                        .details td { padding: 10px; border-bottom: 1px solid #e2e8f0; }
+                    </style>
+                </head>
+                <body>
+                    <div class="header">
+                        <div><h1 style="margin:0; color:#0f172a;">${title}</h1><p style="margin:5px 0 0 0; color:#64748b;">VIGGO WMS</p></div>
+                        <div style="text-align:right;">
+                            <h2 style="margin:0; color:#0369a1;">${tx.reference_doc}</h2>
+                            <p style="margin:5px 0 0 0;">Fecha de registro: ${date}</p>
+                        </div>
+                    </div>
+                    <div class="info-box">
+                        <strong>Cliente:</strong> ${activeClientData.business_name}<br>
+                        <strong>CUIT/RUT:</strong> ${activeClientData.tax_id}<br>
+                        <strong>Sede Operativa:</strong> ${activeClientData.node_name}
+                    </div>
+                    <table class="details">
+                        <thead><tr><th>Concepto</th><th>Notas / Observaciones</th><th style="text-align:right;">Monto Operación</th></tr></thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>${tx.transaction_type}</strong></td>
+                                <td>${tx.notes || 'Sin observaciones'}</td>
+                                <td style="text-align:right; font-weight:bold; font-size:16px;">$${Math.abs(tx.amount).toFixed(2)}</td>
+                            </tr>
+                        </tbody>
+                        <tfoot>
+                            <tr><td colspan="3" style="text-align:right; font-size:18px; padding-top:20px;"><strong>${totalText}</strong></td></tr>
+                        </tfoot>
+                    </table>
+                    <div style="text-align:center; margin-top:50px; color:#94a3b8; font-size:12px;">
+                        Comprobante generado automáticamente por sistema VIGGO WMS. Este documento es de carácter informativo.
+                    </div>
+                </body>
+                </html>
+            `);
+            printWindow.document.close();
+            setTimeout(() => { printWindow.print(); }, 500);
+        };
+
         window.exportStatementExcel = () => {
             if (!activeClientData || currentTransactions.length === 0) return alert("No hay datos para exportar.");
             
@@ -292,7 +350,7 @@
                 const isSale = tx.transaction_type === 'VENTA';
                 const cargo = isSale ? tx.amount.toFixed(2) : '0.00';
                 const abono = !isSale ? Math.abs(tx.amount).toFixed(2) : '0.00';
-                const safeNotes = (tx.notes || '').replace(/,/g, ' '); // Evitar que comas rompan el CSV
+                const safeNotes = (tx.notes || '').replace(/,/g, ' '); 
 
                 csv += `${date},${tx.transaction_type},${tx.reference_doc || ''},${safeNotes},${cargo},${abono},${runningBalance.toFixed(2)}\n`;
             });
@@ -321,12 +379,12 @@
                 
                 rowsHtml += `
                     <tr>
-                        <td style="padding:8px; border-bottom:1px solid #eee;">${date}</td>
-                        <td style="padding:8px; border-bottom:1px solid #eee;"><strong>${tx.transaction_type}</strong></td>
-                        <td style="padding:8px; border-bottom:1px solid #eee;">${tx.reference_doc || '-'}</td>
-                        <td style="padding:8px; border-bottom:1px solid #eee; text-align:right; color:#ef4444;">${cargo}</td>
-                        <td style="padding:8px; border-bottom:1px solid #eee; text-align:right; color:#10b981;">${abono}</td>
-                        <td style="padding:8px; border-bottom:1px solid #eee; text-align:right; font-weight:bold; background:#f8fafc;">$${runningBalance.toFixed(2)}</td>
+                        <td style="padding:8px; border-bottom:1px solid #eee; font-size: 12px;">${date}</td>
+                        <td style="padding:8px; border-bottom:1px solid #eee; font-size: 12px;"><strong>${tx.transaction_type}</strong></td>
+                        <td style="padding:8px; border-bottom:1px solid #eee; font-size: 12px;">${tx.reference_doc || '-'}</td>
+                        <td style="padding:8px; border-bottom:1px solid #eee; text-align:right; color:#ef4444; font-size: 12px;">${cargo}</td>
+                        <td style="padding:8px; border-bottom:1px solid #eee; text-align:right; color:#10b981; font-size: 12px;">${abono}</td>
+                        <td style="padding:8px; border-bottom:1px solid #eee; text-align:right; font-weight:bold; background:#f8fafc; font-size: 12px;">$${runningBalance.toFixed(2)}</td>
                     </tr>`;
             });
 
@@ -339,15 +397,15 @@
                     <style>
                         body { font-family: Arial, sans-serif; padding: 40px; color: #333; }
                         .header { border-bottom: 2px solid #0f172a; padding-bottom: 20px; margin-bottom: 30px; display:flex; justify-content: space-between;}
-                        .info-box { background: #f8fafc; padding: 15px; border-radius: 6px; margin-bottom: 30px; border: 1px solid #e2e8f0; font-size:14px; }
+                        .info-box { background: #f8fafc; padding: 15px; border-radius: 6px; margin-bottom: 30px; border: 1px solid #e2e8f0; font-size:13px; }
                         table { width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size:13px; }
-                        th { background: #0f172a; color: white; padding: 10px; text-align: left; }
+                        th { background: #0f172a; color: white; padding: 10px; text-align: left; font-size: 13px;}
                     </style>
                 </head>
                 <body>
                     <div class="header">
                         <div><h1 style="margin:0; color:#0f172a;">ESTADO DE CUENTA</h1><p style="margin:5px 0 0 0; color:#64748b;">VIGGO WMS</p></div>
-                        <div style="text-align:right;"><p style="margin:5px 0 0 0;">Fecha Emisión: ${today}</p></div>
+                        <div style="text-align:right;"><p style="margin:5px 0 0 0; font-size: 13px;">Fecha Emisión: ${today}</p></div>
                     </div>
                     <div class="info-box">
                         <strong>Cliente:</strong> ${activeClientData.business_name}<br>
@@ -358,7 +416,7 @@
                         <thead><tr><th>Fecha</th><th>Concepto</th><th>Referencia</th><th style="text-align:right;">Cargo</th><th style="text-align:right;">Abono</th><th style="text-align:right;">Saldo</th></tr></thead>
                         <tbody>${rowsHtml}</tbody>
                         <tfoot>
-                            <tr><td colspan="6" style="text-align:right; font-size:16px; padding-top:20px;"><strong>${finalBalanceText}</strong></td></tr>
+                            <tr><td colspan="6" style="text-align:right; font-size:15px; padding-top:20px;"><strong>${finalBalanceText}</strong></td></tr>
                         </tfoot>
                     </table>
                 </body>
@@ -368,7 +426,6 @@
             setTimeout(() => { printWindow.print(); }, 500);
         };
 
-        // Exportar Deuda de TODOS los clientes (Global)
         document.getElementById('btn-export-all').addEventListener('click', () => {
             if (currentClientsList.length === 0) return alert("No hay clientes cargados.");
             
@@ -429,7 +486,7 @@
                     status.innerHTML = `<span style="color: green;">✅ ${result.message}</span>`;
                     setTimeout(() => {
                         closePaymentModal();
-                        loadAccount(clientId); // Recargar los nuevos saldos
+                        loadAccount(clientId); 
                     }, 1500);
                 } else {
                     status.innerHTML = `<span style="color: red;">❌ ${result.error}</span>`;
