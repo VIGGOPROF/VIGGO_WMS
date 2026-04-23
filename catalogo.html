@@ -68,8 +68,12 @@
                 </div>
 
                 <div class="admin-card" style="border-top: 4px solid #10b981;">
-                    <h3><span>🔄</span> Sync Stock (Argentina)</h3>
+                    <h3><span>🔄</span> Sincronización Masiva de Stock</h3>
                     
+                    <select id="sync-node-select" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1; font-weight: bold; font-size: 0.9rem; margin-top: -5px; cursor: pointer;">
+                        <option value="">1º - Selecciona el depósito destino...</option>
+                    </select>
+
                     <div class="excel-legend">
                         <strong>Formato de Excel requerido:</strong><br>
                         Asegúrate de que la primera fila contenga estas tres columnas (no importa el orden):<br>
@@ -78,7 +82,7 @@
                     
                     <label class="upload-area" for="sync-stock-file" id="sync-drop-zone">
                         <span class="upload-icon">📊</span>
-                        <div style="font-size: 0.85rem; font-weight: 600;">Subir Informe de Stock</div>
+                        <div style="font-size: 0.85rem; font-weight: 600;">2º - Subir Informe de Stock</div>
                         <input type="file" id="sync-stock-file" accept=".xlsx, .xls, .csv" style="display:none;">
                     </label>
 
@@ -129,13 +133,16 @@
             } catch (e) { list.innerHTML = '<p style="padding:10px; color:red;">Error.</p>'; }
         };
 
-        // --- NODOS (AHORA MUESTRA Y GESTIONA EL PAÍS) ---
+        // --- NODOS ---
         const loadCatNodes = async () => {
             const list = document.getElementById('node-list-cat');
+            const syncSelect = document.getElementById('sync-node-select'); // Capturamos el nuevo select
+            
             try {
                 const res = await fetch('/api/nodes');
                 const result = await res.json();
                 if (res.ok && result.data) {
+                    // Llenar lista visual
                     list.innerHTML = result.data.map(n => `
                         <div class="list-entry">
                             <span><strong>[${n.display_order}]</strong> ${n.name} <span style="font-size: 0.75rem; color: #64748b; background: #e2e8f0; padding: 2px 6px; border-radius: 4px; margin-left: 5px;">${n.country_code || 'AR'}</span></span>
@@ -144,11 +151,15 @@
                                 <button class="action-btn delete" onclick="deleteCatNode(${n.id})">🗑️</button>
                             </div>
                         </div>`).join('');
+                        
+                    // Llenar el nuevo selector de Sincronización Masiva
+                    syncSelect.innerHTML = '<option value="">1º - Selecciona el depósito destino...</option>' + 
+                                           result.data.map(n => `<option value="${n.id}">${n.name}</option>`).join('');
                 }
             } catch (e) { list.innerHTML = '<p style="padding:10px; color:red;">Error al cargar nodos.</p>'; }
         };
 
-        // CREAR DEPÓSITO CON PAÍS
+        // CREAR DEPÓSITO
         document.getElementById('add-node-btn-cat').addEventListener('click', async () => {
             const nameInput = document.getElementById('node-name-input-cat');
             const orderInput = document.getElementById('node-order-input-cat');
@@ -156,7 +167,7 @@
             
             const name = nameInput.value;
             const orderRaw = orderInput.value;
-            const country = countryInput.value || 'AR'; // Si lo dejas vacío, asume Argentina
+            const country = countryInput.value || 'AR';
             
             if (!name) return;
             
@@ -185,7 +196,7 @@
             }
         });
 
-        // EDITAR DEPÓSITO (Pide Nombre, Prioridad y País en secuencia)
+        // EDITAR DEPÓSITO
         window.editCatNode = async (id, oldName, oldOrder, oldCountry) => {
             const name = prompt("1. Nombre del depósito:", oldName);
             if (!name) return;
@@ -211,12 +222,21 @@
             }
         };
 
-        // --- SINCRONIZADOR ---
+        // --- SINCRONIZADOR UNIVERSAL ---
         document.getElementById('sync-stock-file').addEventListener('change', (e) => {
-            if (e.target.files.length > 0) processSyncStock(e.target.files[0]);
+            const nodeId = document.getElementById('sync-node-select').value;
+            
+            // Seguro anti-errores: Si no eligió país, abortamos
+            if (!nodeId) {
+                alert("⚠️ ATENCIÓN: Por favor, selecciona el depósito destino en el menú desplegable antes de subir el Excel.");
+                e.target.value = ''; // Reseteamos el input
+                return;
+            }
+            
+            if (e.target.files.length > 0) processSyncStock(e.target.files[0], parseInt(nodeId));
         });
 
-        function processSyncStock(file) {
+        function processSyncStock(file, targetNodeId) {
             const status = document.getElementById('sync-status');
             const statsDiv = document.getElementById('sync-stats');
             status.innerHTML = '⏳ Escaneando archivo...';
@@ -249,6 +269,7 @@
                     alert("❌ Formato inválido. No se encontraron las columnas 'Código interno' y/o 'Stock'.");
                     status.innerHTML = '';
                     document.getElementById('sync-drop-zone').style.display = 'block';
+                    document.getElementById('sync-stock-file').value = '';
                     return;
                 }
 
@@ -265,9 +286,10 @@
                 status.innerHTML = '🚀 Enviando a la base de datos...';
                 
                 try {
+                    // Ahora mandamos el Excel JUNTO CON el ID del depósito elegido
                     const res = await fetch('/api/sync_rabanal', {
                         method: 'POST',
-                        body: JSON.stringify({ items: cleanItems }),
+                        body: JSON.stringify({ nodeId: targetNodeId, items: cleanItems }),
                         headers: { 'Content-Type': 'application/json' }
                     });
                     
@@ -279,25 +301,28 @@
                             document.getElementById('sync-new').innerText = resData.new_items || 0;
                             document.getElementById('sync-upd').innerText = resData.updated_items || 0;
                             statsDiv.style.display = 'flex';
-                            status.innerHTML = '✅ ¡Stock Sincronizado!';
+                            status.innerHTML = '✅ ¡Stock Sincronizado en el Depósito!';
                             status.style.color = '#10b981';
-                            setTimeout(() => { document.getElementById('sync-drop-zone').style.display = 'block'; }, 4000);
+                            setTimeout(() => { document.getElementById('sync-drop-zone').style.display = 'block'; document.getElementById('sync-stock-file').value = ''; }, 4000);
                         } else {
                             alert("❌ ERROR EN SERVIDOR:\n\n" + resData.error);
                             status.innerHTML = `❌ Error en Servidor`;
                             status.style.color = 'red';
                             document.getElementById('sync-drop-zone').style.display = 'block';
+                            document.getElementById('sync-stock-file').value = '';
                         }
                     } catch(e) {
                         alert("❌ CRASH DEL SERVIDOR (Fallo 500):\n\nEl backend colapsó. Respuesta: " + resText.substring(0,200));
                         status.innerHTML = '❌ Error crítico.';
                         status.style.color = 'red';
                         document.getElementById('sync-drop-zone').style.display = 'block';
+                        document.getElementById('sync-stock-file').value = '';
                     }
                 } catch (err) { 
                     status.innerHTML = '❌ Error de red.';
                     status.style.color = 'red';
                     document.getElementById('sync-drop-zone').style.display = 'block';
+                    document.getElementById('sync-stock-file').value = '';
                 }
             };
             reader.readAsArrayBuffer(file);
