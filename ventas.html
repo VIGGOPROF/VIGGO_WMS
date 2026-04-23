@@ -401,8 +401,12 @@
                 html += `
                     <tr>
                         <td><strong>${item.sku}</strong></td>
-                        <td>${item.name}</td>
-                        <td style="text-align:center; font-weight:bold; color:#0369a1;">${item.qty}</td>
+                        <td class="col-producto" title="${item.name}">${item.name}</td>
+                        <td style="text-align:center;">
+                            <input type="number" min="1" value="${item.qty}" 
+                                   onchange="updateItemQty(${index}, this.value)" 
+                                   style="width: 60px; text-align: center; padding: 4px; border: 1px solid #cbd5e1; border-radius: 4px; font-weight: bold; color: #0369a1; outline: none;">
+                        </td>
                         <td style="text-align:right; ${priceColor}">$${item.price.toFixed(2)}</td>
                         <td style="text-align:right; font-weight:bold;">$${item.subtotal.toFixed(2)}</td>
                         <td style="text-align:center;"><button class="btn-remove" onclick="removeFromCart(${index})">X</button></td>
