@@ -26,11 +26,9 @@
         
         .totals-box { background: #f1f5f9; padding: 20px; border-radius: 8px; text-align: right; }
         .totals-box h2 { margin: 0; color: #10b981; font-size: 2.5rem; }
-        .btn-confirm { background: #10b981; color: white; width: 100%; border: none; padding: 15px; border-radius: 8px; font-size: 1.1rem; font-weight: bold; margin-top: 15px; cursor: pointer; transition: 0.2s; }
-        .btn-confirm:hover { background: #059669; }
-        .btn-confirm:disabled { background: #94a3b8; cursor: not-allowed; }
+        .btn-confirm { color: white; width: 100%; border: none; padding: 15px; border-radius: 8px; font-size: 1rem; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        .btn-confirm:disabled { background: #94a3b8 !important; cursor: not-allowed; }
 
-        /* Estilos del Buscador Predictivo */
         .autocomplete-wrapper { position: relative; margin-top: 5px; margin-bottom: 15px; }
         .autocomplete-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #cbd5e1; border-radius: 0 0 6px 6px; max-height: 250px; overflow-y: auto; z-index: 1000; display: none; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.2); }
         .ac-item { padding: 10px 15px; border-bottom: 1px solid #f1f5f9; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: background 0.2s; }
@@ -49,82 +47,117 @@
     <main class="main-content">
         <div class="module-container">
             <header style="margin-bottom: 25px;">
-                <h2>Punto de Venta B2B</h2>
-                <p style="color: #64748b; margin-top: 5px;">Genera remitos, calcula precios automáticos y descuenta stock.</p>
+                <h2>Gestión de Pedidos y POS</h2>
+                <p style="color: #64748b; margin-top: 5px;">Genera borradores, prepara mercadería y factura los remitos confirmados.</p>
             </header>
 
-            <div class="pos-grid">
-                
-                <div>
-                    <div class="box">
-                        <h3>1. Seleccionar Cliente</h3>
-                        <select id="pos-client-select" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 1rem; margin-bottom: 10px;">
-                            <option value="">Cargando clientes...</option>
-                        </select>
-                        <div id="client-card" class="client-info" style="display: none;">
-                            <span id="cc-name"><strong>Razón Social:</strong> -</span>
-                            <span id="cc-tax"><strong>CUIT/RUT:</strong> -</span>
-                            <span id="cc-node" style="color: #0369a1; font-weight: bold;">📍 Lista de Precios Activa: -</span>
-                        </div>
-                    </div>
-
-                    <div class="box" id="carga-box" style="opacity: 0.5; pointer-events: none;">
-                        <h3>2. Agregar Artículos</h3>
-                        
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                            <div style="border-right: 1px solid #e2e8f0; padding-right: 20px;">
-                                <label style="font-size:0.8rem; font-weight:bold; color:#475569;">Buscador Rápido</label>
-                                
-                                <div class="autocomplete-wrapper">
-                                    <input type="text" id="pos-search" placeholder="🔍 Buscar por nombre o SKU..." style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; outline: none; font-size: 1rem;" autocomplete="off">
-                                    <div id="autocomplete-results" class="autocomplete-dropdown"></div>
-                                </div>
-
-                                <div class="input-inline">
-                                    <input type="text" id="pos-sku-selected" placeholder="SKU Confirmado" readonly style="width: 60%; background: #f8fafc; color: #64748b; font-weight: bold;">
-                                    <input type="number" id="pos-qty" placeholder="Cant." value="1" min="1" style="width: 40%;">
-                                </div>
-                                <button id="btn-add-item" style="background:#0f172a; color:white; border:none; padding:10px 15px; border-radius:6px; cursor:pointer; width:100%; font-weight:bold; font-size:0.95rem;">➕ Agregar al Remito</button>
-                            </div>
-                            
-                            <div>
-                                <label style="font-size:0.8rem; font-weight:bold; color:#475569;">Importar Lista Masiva (Excel)</label>
-                                <p style="font-size: 0.75rem; color: #64748b; margin: 5px 0;">Columnas requeridas: <b>SKU</b> y <b>Cantidad</b></p>
-                                <input type="file" id="pos-excel" accept=".xlsx, .xls, .csv" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.8rem; margin-bottom: 10px;">
-                                <button id="btn-upload-excel" style="background:#0369a1; color:white; border:none; padding:10px 15px; border-radius:6px; cursor:pointer; width:100%; font-weight:bold; font-size:0.95rem;">📤 Cargar Archivo</button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="box">
-                        <h3>Detalle del Remito</h3>
-                        <table class="cart-table" style="width: 100%; border-collapse: collapse;">
-                            <thead>
-                                <tr>
-                                    <th>SKU</th>
-                                    <th>Descripción</th>
-                                    <th style="text-align:center;">Cant.</th>
-                                    <th style="text-align:right;">P. Unit</th>
-                                    <th style="text-align:right;">Subtotal</th>
-                                    <th></th>
-                                </tr>
-                            </thead>
-                            <tbody id="cart-tbody">
-                                <tr><td colspan="6" style="text-align: center; padding: 20px; color:#94a3b8;">El carrito está vacío</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <div class="box totals-box">
-                    <span style="font-weight: bold; color: #64748b; text-transform: uppercase; letter-spacing: 1px;">Total a Facturar (USD)</span>
-                    <h2 id="cart-total">$ 0.00</h2>
-                    
-                    <button id="btn-confirm-sale" class="btn-confirm" disabled>Confirmar Venta</button>
-                    <div id="sale-status" style="margin-top: 15px; font-size: 0.85rem; font-weight: bold; text-align: center;"></div>
-                </div>
-
+            <div style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px;">
+                <button id="tab-btn-pos" onclick="switchTab('pos')" style="background: transparent; border: none; font-size: 1.1rem; font-weight: bold; color: #0f172a; cursor: pointer; padding: 5px 10px; border-bottom: 3px solid #0f172a;">🛒 Nuevo Pedido / POS</button>
+                <button id="tab-btn-drafts" onclick="switchTab('drafts')" style="background: transparent; border: none; font-size: 1.1rem; font-weight: bold; color: #64748b; cursor: pointer; padding: 5px 10px; border-bottom: 3px solid transparent;">⏳ Remitos Pendientes</button>
             </div>
+
+            <div id="view-drafts" style="display:none;">
+                <div class="box">
+                    <h3>Remitos Pendientes de Facturación</h3>
+                    <p style="font-size: 0.85rem; color: #64748b; margin-top: -5px; margin-bottom: 15px;">Estos documentos tienen stock físico reservado, pero no han generado deuda contable.</p>
+                    <table class="cart-table" style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr>
+                                <th>Doc. Referencia</th>
+                                <th>Cliente</th>
+                                <th>Fecha</th>
+                                <th style="text-align:right;">Monto Estimado</th>
+                                <th style="text-align:center;">Acciones (Auditoría)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="drafts-tbody">
+                            <tr><td colspan="5" style="text-align:center; padding: 20px;">Cargando...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="view-pos">
+                <div class="pos-grid">
+                    <div>
+                        <div class="box">
+                            <h3>1. Seleccionar Cliente</h3>
+                            <select id="pos-client-select" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 1rem; margin-bottom: 10px;">
+                                <option value="">Cargando clientes...</option>
+                            </select>
+                            <div id="client-card" class="client-info" style="display: none;">
+                                <span id="cc-name"><strong>Razón Social:</strong> -</span>
+                                <span id="cc-tax"><strong>CUIT/RUT:</strong> -</span>
+                                <span id="cc-node" style="color: #0369a1; font-weight: bold;">📍 Lista de Precios Activa: -</span>
+                            </div>
+                        </div>
+
+                        <div class="box" id="carga-box" style="opacity: 0.5; pointer-events: none;">
+                            <h3>2. Agregar Artículos</h3>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                                <div style="border-right: 1px solid #e2e8f0; padding-right: 20px;">
+                                    <label style="font-size:0.8rem; font-weight:bold; color:#475569;">Buscador Rápido</label>
+                                    
+                                    <div class="autocomplete-wrapper">
+                                        <input type="text" id="pos-search" placeholder="🔍 Buscar por nombre o SKU..." style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; outline: none; font-size: 1rem;" autocomplete="off">
+                                        <div id="autocomplete-results" class="autocomplete-dropdown"></div>
+                                    </div>
+
+                                    <div class="input-inline">
+                                        <input type="text" id="pos-sku-selected" placeholder="SKU Confirmado" readonly style="width: 60%; background: #f8fafc; color: #64748b; font-weight: bold;">
+                                        <input type="number" id="pos-qty" placeholder="Cant." value="1" min="1" style="width: 40%;">
+                                    </div>
+                                    <button id="btn-add-item" style="background:#0f172a; color:white; border:none; padding:10px 15px; border-radius:6px; cursor:pointer; width:100%; font-weight:bold; font-size:0.95rem;">➕ Agregar al Remito</button>
+                                </div>
+                                
+                                <div>
+                                    <label style="font-size:0.8rem; font-weight:bold; color:#475569;">Importar Lista Masiva (Excel)</label>
+                                    <p style="font-size: 0.75rem; color: #64748b; margin: 5px 0;">Columnas requeridas: <b>SKU</b> y <b>Cantidad</b></p>
+                                    <input type="file" id="pos-excel" accept=".xlsx, .xls, .csv" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.8rem; margin-bottom: 10px;">
+                                    <button id="btn-upload-excel" style="background:#0369a1; color:white; border:none; padding:10px 15px; border-radius:6px; cursor:pointer; width:100%; font-weight:bold; font-size:0.95rem;">📤 Cargar Archivo</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="box">
+                            <h3>Detalle de Líneas de Pedido</h3>
+                            <table class="cart-table" style="width: 100%; border-collapse: collapse;">
+                                <thead>
+                                    <tr>
+                                        <th>SKU</th>
+                                        <th>Descripción</th>
+                                        <th style="text-align:center;">Cant.</th>
+                                        <th style="text-align:right;">P. Unit</th>
+                                        <th style="text-align:right;">Subtotal</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="cart-tbody">
+                                    <tr><td colspan="6" style="text-align: center; padding: 20px; color:#94a3b8;">El carrito está vacío</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="box totals-box">
+                        <span style="font-weight: bold; color: #64748b; text-transform: uppercase; letter-spacing: 1px;">Total Venta (USD)</span>
+                        <h2 id="cart-total" style="margin-bottom: 15px;">$ 0.00</h2>
+                        
+                        <div id="draft-banner" style="background:#fef3c7; border:1px solid #f59e0b; padding:10px; border-radius:6px; margin-bottom:15px; font-weight:bold; color:#b45309; display:none; text-align:left; font-size:0.9rem;">
+                           ✏️ Editando: <span id="draft-ref"></span>
+                           <button onclick="clearDraft()" style="float:right; border:none; background:transparent; color:red; cursor:pointer; font-weight:bold;">X Cancelar</button>
+                        </div>
+
+                        <div style="display:flex; flex-direction:column; gap:10px;">
+                            <button id="btn-save-draft" class="btn-confirm" style="background:#f59e0b;" disabled>📦 Guardar Remito (Borrador)</button>
+                            <button id="btn-save-final" class="btn-confirm" style="background:#10b981;" disabled>✅ Facturar Definitivo</button>
+                        </div>
+                        
+                        <div id="sale-status" style="margin-top: 15px; font-size: 0.85rem; font-weight: bold; text-align: center;"></div>
+                    </div>
+                </div>
+            </div>
+
         </div>
     </main>
 
@@ -134,46 +167,44 @@
         let previousClientId = ''; 
         let priceList = new Map(); 
         let cart = []; 
+        let activeDraftId = null;
+
+        // --- SISTEMA DE PESTAÑAS ---
+        window.switchTab = (tab) => {
+            if(tab === 'pos') {
+                document.getElementById('view-pos').style.display = 'block';
+                document.getElementById('view-drafts').style.display = 'none';
+                document.getElementById('tab-btn-pos').style.color = '#0f172a';
+                document.getElementById('tab-btn-pos').style.borderBottomColor = '#0f172a';
+                document.getElementById('tab-btn-drafts').style.color = '#64748b';
+                document.getElementById('tab-btn-drafts').style.borderBottomColor = 'transparent';
+            } else {
+                document.getElementById('view-pos').style.display = 'none';
+                document.getElementById('view-drafts').style.display = 'block';
+                document.getElementById('tab-btn-drafts').style.color = '#0f172a';
+                document.getElementById('tab-btn-drafts').style.borderBottomColor = '#0f172a';
+                document.getElementById('tab-btn-pos').style.color = '#64748b';
+                document.getElementById('tab-btn-pos').style.borderBottomColor = 'transparent';
+                loadDrafts();
+            }
+        };
 
         document.addEventListener("DOMContentLoaded", () => {
             loadClients();
 
-            // Todo el código de botones y eventos lo metemos aquí adentro
-            // para que nazca seguro y no choque con script.js
-            
-            document.getElementById('pos-client-select').addEventListener('change', async (e) => {
-                const clientId = e.target.value;
+            // Lógica Centralizada de Selección de Cliente
+            const triggerClientChange = async (clientId) => {
                 const card = document.getElementById('client-card');
                 const cargaBox = document.getElementById('carga-box');
                 
-                if (cart.length > 0 && clientId !== previousClientId) {
-                    const conf = confirm("⚠️ Tienes artículos en el pedido actual.\n\nSi cambias de cliente, se borrará el carrito para aplicar la lista de precios del nuevo país.\n\n¿Deseas continuar y borrar el pedido?");
-                    if (!conf) {
-                        e.target.value = previousClientId;
-                        return; 
-                    } else {
-                        cart = [];
-                        updateCartUI();
-                    }
-                }
-
-                if (!clientId) {
-                    card.style.display = 'none';
-                    cargaBox.style.opacity = '0.5';
-                    cargaBox.style.pointerEvents = 'none';
-                    currentClient = null;
-                    previousClientId = '';
-                    return;
-                }
-
                 previousClientId = clientId;
-                currentClient = clientsList.find(c => c.id.toString() === clientId);
+                currentClient = clientsList.find(c => c.id.toString() === clientId.toString());
+                
                 document.getElementById('cc-name').innerHTML = `<strong>Razón Social:</strong> ${currentClient.business_name}`;
                 document.getElementById('cc-tax').innerHTML = `<strong>Identificación:</strong> ${currentClient.tax_id}`;
-                document.getElementById('cc-node').innerHTML = `📍 Lista de Precios Activa: ${currentClient.node_name}`;
+                document.getElementById('cc-node').innerHTML = `📍 Lista de Precios Activa: ${currentClient.node_name} ⏳ Cargando...`;
                 card.style.display = 'block';
 
-                document.getElementById('cc-node').innerHTML += ` ⏳ Cargando...`;
                 try {
                     const res = await fetch(`/api/prices?node=${currentClient.node_id}`);
                     const result = await res.json();
@@ -185,28 +216,38 @@
                         document.getElementById('cc-node').innerHTML = `📍 Lista de Precios Activa: ${currentClient.node_name} ✅`;
                         cargaBox.style.opacity = '1';
                         cargaBox.style.pointerEvents = 'auto';
-                        document.getElementById('pos-search').focus();
                     }
-                } catch (err) { alert("Error al cargar la lista de precios."); }
+                } catch (err) { alert("Error al cargar precios."); }
+            };
+
+            document.getElementById('pos-client-select').addEventListener('change', async (e) => {
+                const clientId = e.target.value;
+                if (cart.length > 0 && clientId !== previousClientId) {
+                    const conf = confirm("⚠️ Tienes artículos cargados.\n\nCambiar el cliente borrará el carrito actual. ¿Continuar?");
+                    if (!conf) { e.target.value = previousClientId; return; } 
+                    else { cart = []; updateCartUI(); }
+                }
+
+                if (!clientId) {
+                    document.getElementById('client-card').style.display = 'none';
+                    document.getElementById('carga-box').style.opacity = '0.5';
+                    document.getElementById('carga-box').style.pointerEvents = 'none';
+                    currentClient = null;
+                    previousClientId = '';
+                    return;
+                }
+
+                await triggerClientChange(clientId);
             });
 
-            // --------------------------------------------------------
-            // LÓGICA DEL BUSCADOR INTELIGENTE (VARIABLES RENOMBRADAS)
-            // --------------------------------------------------------
+            // Buscador
             const posSearchInput = document.getElementById('pos-search');
             const posResultsDiv = document.getElementById('autocomplete-results');
 
             posSearchInput.addEventListener('input', (e) => {
                 const val = e.target.value.toLowerCase().trim();
-                if (!val) {
-                    posResultsDiv.style.display = 'none';
-                    return;
-                }
-                
-                const matches = Array.from(priceList.values()).filter(p => 
-                    p.sku.toLowerCase().includes(val) || 
-                    p.name.toLowerCase().includes(val)
-                );
+                if (!val) { posResultsDiv.style.display = 'none'; return; }
+                const matches = Array.from(priceList.values()).filter(p => p.sku.toLowerCase().includes(val) || p.name.toLowerCase().includes(val));
                 
                 if (matches.length === 0) {
                     posResultsDiv.innerHTML = '<div style="padding: 15px; text-align:center; color:#64748b;">No hay coincidencias</div>';
@@ -216,12 +257,9 @@
                         const stockClass = m.stock > 0 ? 'ac-stock' : 'ac-stock ac-stock-zero';
                         html += `
                             <div class="ac-item" onclick="selectProduct('${m.sku}')">
-                                <div>
-                                    <div class="ac-name">${m.name}</div>
-                                    <div class="ac-sku">SKU: ${m.sku}</div>
-                                </div>
+                                <div><div class="ac-name">${m.name}</div><div class="ac-sku">SKU: ${m.sku}</div></div>
                                 <div style="text-align: right;">
-                                    <span class="${stockClass}" title="Stock Físico Disponible">${m.stock}</span>
+                                    <span class="${stockClass}">${m.stock}</span>
                                     <div class="ac-price">$${m.price.toFixed(2)}</div>
                                 </div>
                             </div>
@@ -232,45 +270,28 @@
                 posResultsDiv.style.display = 'block';
             });
 
-            document.addEventListener('click', (e) => {
-                if (!e.target.closest('.autocomplete-wrapper')) {
-                    posResultsDiv.style.display = 'none';
-                }
-            });
+            document.addEventListener('click', (e) => { if (!e.target.closest('.autocomplete-wrapper')) posResultsDiv.style.display = 'none'; });
 
             window.selectProduct = (sku) => {
                 const prod = priceList.get(sku);
                 document.getElementById('pos-sku-selected').value = sku;
                 posSearchInput.value = prod.name;
                 posResultsDiv.style.display = 'none';
-                
                 const qtyInput = document.getElementById('pos-qty');
-                qtyInput.focus();
-                qtyInput.select();
+                qtyInput.focus(); qtyInput.select();
             };
 
             document.getElementById('pos-qty').addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    document.getElementById('btn-add-item').click();
-                }
+                if (e.key === 'Enter') { e.preventDefault(); document.getElementById('btn-add-item').click(); }
             });
 
             document.getElementById('btn-add-item').addEventListener('click', () => {
                 const skuInput = document.getElementById('pos-sku-selected');
                 const qtyInput = document.getElementById('pos-qty');
-                
-                if(!skuInput.value) {
-                    alert("Busca y selecciona un producto primero.");
-                    posSearchInput.focus();
-                    return;
-                }
+                if(!skuInput.value) return;
 
                 addItemToCart(skuInput.value, qtyInput.value);
-                
-                skuInput.value = '';
-                posSearchInput.value = '';
-                qtyInput.value = '1';
+                skuInput.value = ''; posSearchInput.value = ''; qtyInput.value = '1';
                 posSearchInput.focus();
                 updateCartUI();
             });
@@ -293,52 +314,51 @@
                         }
                         if (sku && qty) addItemToCart(sku, qty);
                     });
-                    
-                    fileInput.value = '';
-                    updateCartUI();
+                    fileInput.value = ''; updateCartUI();
                 };
                 reader.readAsArrayBuffer(fileInput.files[0]);
             });
 
-            document.getElementById('btn-confirm-sale').addEventListener('click', async () => {
-                const btn = document.getElementById('btn-confirm-sale');
+            // Lógica de Envío
+            const submitSale = async (action) => {
+                const btnDraft = document.getElementById('btn-save-draft');
+                const btnFinal = document.getElementById('btn-save-final');
                 const status = document.getElementById('sale-status');
                 
                 if (cart.length === 0 || !currentClient) return;
 
-                btn.disabled = true;
-                btn.innerText = '⏳ Facturando y descontando stock...';
+                btnDraft.disabled = true; btnFinal.disabled = true;
+                status.innerHTML = '⏳ Procesando transacción...';
 
                 const payload = {
                     clientId: currentClient.id,
                     items: cart.map(i => ({ sku: i.sku, qty: i.qty })),
-                    userId: getUserIdLocal()
+                    userId: getUserIdLocal(),
+                    action: action, // 'PENDIENTE' (Remito) o 'FACTURADO' (Venta)
+                    saleId: activeDraftId 
                 };
 
                 try {
-                    const res = await fetch('/api/sales', {
-                        method: 'POST',
-                        body: JSON.stringify(payload),
-                        headers: { 'Content-Type': 'application/json' }
-                    });
-                    
+                    const res = await fetch('/api/sales', { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'application/json' } });
                     const result = await res.json();
                     
                     if (res.ok) {
                         status.innerHTML = `<span style="color: green;">✅ ${result.message}</span>`;
-                        generateRemitoPDF(currentClient, result.docRef, result.items, result.total);
-                        cart = [];
-                        updateCartUI();
+                        generateRemitoPDF(currentClient, result.docRef, result.items, result.total, action);
+                        clearDraft(); 
                     } else {
                         status.innerHTML = `<span style="color: red;">❌ ${result.error}</span>`;
                     }
                 } catch (err) {
                     status.innerHTML = `<span style="color: red;">❌ Error de conexión.</span>`;
                 } finally {
-                    btn.innerText = 'Confirmar Venta';
                     setTimeout(() => { status.innerHTML = ''; }, 5000);
+                    updateCartUI(); 
                 }
-            });
+            };
+
+            document.getElementById('btn-save-draft').addEventListener('click', () => submitSale('PENDIENTE'));
+            document.getElementById('btn-save-final').addEventListener('click', () => submitSale('FACTURADO'));
 
         }); // FIN DEL DOMContentLoaded
 
@@ -355,29 +375,26 @@
                 const result = await res.json();
                 if (res.ok && result.data) {
                     clientsList = result.data;
-                    select.innerHTML = '<option value="">Seleccione un cliente para facturar...</option>';
-                    clientsList.forEach(c => {
-                        select.innerHTML += `<option value="${c.id}">${c.business_name} (Sede: ${c.node_name})</option>`;
-                    });
+                    select.innerHTML = '<option value="">Seleccione un cliente para operar...</option>';
+                    clientsList.forEach(c => { select.innerHTML += `<option value="${c.id}">${c.business_name} (Sede: ${c.node_name})</option>`; });
                 }
-            } catch (error) { console.error("Error", error); }
+            } catch (error) {}
         };
 
         const updateCartUI = () => {
             const tbody = document.getElementById('cart-tbody');
             const totalEl = document.getElementById('cart-total');
-            const btn = document.getElementById('btn-confirm-sale');
+            const btnDraft = document.getElementById('btn-save-draft');
+            const btnFinal = document.getElementById('btn-save-final');
 
             if (cart.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px; color:#94a3b8;">El carrito está vacío</td></tr>';
                 totalEl.innerText = '$ 0.00';
-                btn.disabled = true;
+                btnDraft.disabled = true; btnFinal.disabled = true;
                 return;
             }
 
-            let html = '';
-            let grandTotal = 0;
-
+            let html = ''; let grandTotal = 0;
             cart.forEach((item, index) => {
                 grandTotal += item.subtotal;
                 const priceColor = item.price === 0 ? 'color: red;' : '';
@@ -395,49 +412,103 @@
 
             tbody.innerHTML = html;
             totalEl.innerText = `$ ${grandTotal.toFixed(2)}`;
-            btn.disabled = false;
+            btnDraft.disabled = false; btnFinal.disabled = false;
         };
 
-        window.removeFromCart = (index) => {
-            cart.splice(index, 1);
-            updateCartUI();
-        };
+        window.removeFromCart = (index) => { cart.splice(index, 1); updateCartUI(); };
 
         const addItemToCart = (skuRaw, qtyRaw) => {
             const sku = skuRaw.trim().toUpperCase();
             const qty = parseInt(qtyRaw, 10);
-            
             if (!sku || isNaN(qty) || qty <= 0) return;
 
             const productData = priceList.get(sku);
-            if (!productData) {
-                alert(`El SKU "${sku}" no existe o no tiene precio en la Sede ${currentClient.node_name}.`);
-                return;
-            }
-
-            if (qty > productData.stock) {
-                const conf = confirm(`⚠️ El cliente está pidiendo ${qty} unidades, pero solo hay ${productData.stock} en stock.\n\n¿Deseas agregarlas al remito de todos modos?`);
-                if (!conf) return;
-            }
+            if (!productData) return alert(`El SKU "${sku}" no existe o no tiene precio aquí.`);
 
             const existingIndex = cart.findIndex(i => i.sku === sku);
             if (existingIndex >= 0) {
                 cart[existingIndex].qty += qty;
                 cart[existingIndex].subtotal = cart[existingIndex].qty * cart[existingIndex].price;
             } else {
-                cart.push({
-                    sku: sku,
-                    name: productData.name,
-                    qty: qty,
-                    price: productData.price,
-                    subtotal: qty * productData.price
-                });
+                cart.push({ sku: sku, name: productData.name, qty: qty, price: productData.price, subtotal: qty * productData.price });
             }
         };
 
-        const generateRemitoPDF = (client, docRef, items, total) => {
+        // --- MANEJO DE BORRADORES / PENDIENTES ---
+        window.loadDrafts = async () => {
+            const tbody = document.getElementById('drafts-tbody');
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Cargando pendientes...</td></tr>';
+            try {
+                const res = await fetch('/api/sales');
+                const result = await res.json();
+                if(res.ok && result.data.length > 0) {
+                    window.draftsData = result.data;
+                    let html = '';
+                    result.data.forEach((d, idx) => {
+                        const date = new Date(d.sale_date).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' });
+                        html += `
+                            <tr>
+                                <td><strong>${d.reference_doc}</strong></td>
+                                <td>${d.business_name}</td>
+                                <td>${date}</td>
+                                <td style="text-align:right; font-weight:bold;">$${d.total_amount.toFixed(2)}</td>
+                                <td style="text-align:center;">
+                                    <button onclick="editDraft(${idx})" style="background:#0f172a; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer;">✏️ Ver y Facturar</button>
+                                    <button onclick="deleteDraft(${d.id})" style="background:#fee2e2; color:#ef4444; border:none; padding:6px 10px; border-radius:4px; cursor:pointer; font-weight:bold; margin-left:5px;">X</button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                    tbody.innerHTML = html;
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px; color:#64748b;">No hay remitos pendientes de armado.</td></tr>';
+                }
+            } catch(e) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:red;">Error de red.</td></tr>'; }
+        };
+
+        window.editDraft = async (idx) => {
+            const draft = window.draftsData[idx];
+            
+            // Limpiamos todo para que el sistema asuma al cliente sin quejarse
+            cart = []; previousClientId = '';
+            
+            const select = document.getElementById('pos-client-select');
+            select.value = draft.client_id;
+            select.dispatchEvent(new Event('change')); // Forzamos carga de cliente y precios
+
+            // Damos 500ms para que bajen los precios por las dudas (es ultra rápido)
+            setTimeout(() => {
+                activeDraftId = draft.id;
+                cart = draft.items.map(i => ({ sku: i.sku, name: i.name, qty: i.qty, price: i.price, subtotal: i.qty * i.price }));
+                updateCartUI();
+                
+                document.getElementById('draft-banner').style.display = 'block';
+                document.getElementById('draft-ref').innerText = draft.reference_doc;
+                switchTab('pos');
+            }, 600);
+        };
+
+        window.clearDraft = () => {
+            activeDraftId = null;
+            cart = [];
+            document.getElementById('draft-banner').style.display = 'none';
+            document.getElementById('pos-client-select').value = '';
+            document.getElementById('pos-client-select').dispatchEvent(new Event('change'));
+            updateCartUI();
+        };
+
+        window.deleteDraft = async (id) => {
+            if(!confirm("¿Deseas cancelar definitivamente este remito?\n\nEl stock reservado volverá a estar disponible en el inventario.")) return;
+            try {
+                await fetch('/api/sales?id=' + id, {method: 'DELETE'});
+                loadDrafts();
+            } catch(e) { alert("Error al eliminar."); }
+        };
+
+        const generateRemitoPDF = (client, docRef, items, total, action) => {
             const printWindow = window.open('', '_blank');
             const date = new Date().toLocaleDateString('es-ES');
+            const titleText = action === 'FACTURADO' ? 'FACTURA B2B / REMITO DEFINITIVO' : 'REMITO BORRADOR (PENDIENTE)';
             
             let itemsHtml = '';
             items.forEach(item => {
@@ -454,7 +525,7 @@
             printWindow.document.write(`
                 <html>
                 <head>
-                    <title>Remito ${docRef}</title>
+                    <title>Documento ${docRef}</title>
                     <style>
                         body { font-family: Arial, sans-serif; padding: 40px; color: #333; }
                         .header { border-bottom: 2px solid #0f172a; padding-bottom: 20px; margin-bottom: 30px; display:flex; justify-content: space-between;}
@@ -465,7 +536,7 @@
                 </head>
                 <body>
                     <div class="header">
-                        <div><h1 style="margin:0; color:#0f172a;">REMITO COMERCIAL</h1><p style="margin:5px 0 0 0; color:#64748b;">VIGGO WMS</p></div>
+                        <div><h1 style="margin:0; color:#0f172a; font-size:20px;">${titleText}</h1><p style="margin:5px 0 0 0; color:#64748b;">VIGGO WMS</p></div>
                         <div style="text-align:right;"><h2 style="margin:0; color:#0369a1;">${docRef}</h2><p style="margin:5px 0 0 0;">Fecha: ${date}</p></div>
                     </div>
                     <div class="info-box">
@@ -475,7 +546,7 @@
                                 <td><strong>CUIT/RUT:</strong> ${client.tax_id}</td>
                             </tr>
                             <tr>
-                                <td><strong>País de Operación:</strong> ${client.node_name}</td>
+                                <td><strong>Sede Logística:</strong> ${client.node_name}</td>
                                 <td><strong>Entrega:</strong> ${client.shipping_address || 'A convenir'}</td>
                             </tr>
                         </table>
