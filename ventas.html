@@ -514,11 +514,11 @@
             items.forEach(item => {
                 itemsHtml += `
                     <tr>
-                        <td style="padding:8px; border-bottom:1px solid #eee;">${item.sku}</td>
-                        <td style="padding:8px; border-bottom:1px solid #eee;">${item.name}</td>
-                        <td style="padding:8px; border-bottom:1px solid #eee; text-align:center;">${item.qty}</td>
-                        <td style="padding:8px; border-bottom:1px solid #eee; text-align:right;">$${item.price.toFixed(2)}</td>
-                        <td style="padding:8px; border-bottom:1px solid #eee; text-align:right; font-weight:bold;">$${item.subtotal.toFixed(2)}</td>
+                        <td style="padding:4px; border-bottom:1px solid #eee; font-size:10px; font-weight:bold; width: 15%;">${item.sku}</td>
+                        <td style="padding:4px; border-bottom:1px solid #eee; font-size:9px; color:#334155; width: 50%; max-width: 250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${item.name}</td>
+                        <td style="padding:4px; border-bottom:1px solid #eee; text-align:center; font-size:10px; font-weight:bold; width: 10%;">${item.qty}</td>
+                        <td style="padding:4px; border-bottom:1px solid #eee; text-align:right; font-size:10px; width: 12%;">USD ${item.price.toFixed(2)}</td>
+                        <td style="padding:4px; border-bottom:1px solid #eee; text-align:right; font-weight:bold; font-size:10px; width: 13%;">USD ${item.subtotal.toFixed(2)}</td>
                     </tr>`;
             });
 
@@ -527,35 +527,46 @@
                 <head>
                     <title>Documento ${docRef}</title>
                     <style>
-                        body { font-family: Arial, sans-serif; padding: 40px; color: #333; }
-                        .header { border-bottom: 2px solid #0f172a; padding-bottom: 20px; margin-bottom: 30px; display:flex; justify-content: space-between;}
-                        .info-box { background: #f8fafc; padding: 15px; border-radius: 6px; margin-bottom: 30px; border: 1px solid #e2e8f0; }
-                        table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
-                        th { background: #0f172a; color: white; padding: 10px; text-align: left; font-size: 14px; }
+                        body { font-family: Arial, sans-serif; padding: 30px; color: #333; }
+                        .header { border-bottom: 2px solid #0f172a; padding-bottom: 10px; margin-bottom: 15px; display:flex; justify-content: space-between;}
+                        .info-box { background: #f8fafc; padding: 10px 15px; border-radius: 6px; margin-bottom: 15px; border: 1px solid #e2e8f0; font-size: 11px; }
+                        table { width: 100%; border-collapse: collapse; margin-bottom: 15px; table-layout: fixed; }
+                        th { background: #0f172a; color: white; padding: 6px 4px; text-align: left; font-size: 10px; text-transform: uppercase; }
                     </style>
                 </head>
                 <body>
                     <div class="header">
-                        <div><h1 style="margin:0; color:#0f172a; font-size:20px;">${titleText}</h1><p style="margin:5px 0 0 0; color:#64748b;">VIGGO WMS</p></div>
-                        <div style="text-align:right;"><h2 style="margin:0; color:#0369a1;">${docRef}</h2><p style="margin:5px 0 0 0;">Fecha: ${date}</p></div>
+                        <div><h1 style="margin:0; color:#0f172a; font-size:16px;">${titleText}</h1><p style="margin:2px 0 0 0; color:#64748b; font-size:10px;">VIGGO WMS</p></div>
+                        <div style="text-align:right;"><h2 style="margin:0; color:#0369a1; font-size:14px;">${docRef}</h2><p style="margin:2px 0 0 0; font-size:10px;">Fecha: ${date}</p></div>
                     </div>
                     <div class="info-box">
-                        <table style="margin:0; border:none;">
+                        <table style="margin:0; border:none; font-size:11px; table-layout: auto;">
                             <tr>
-                                <td><strong>Cliente:</strong> ${client.business_name}</td>
-                                <td><strong>CUIT/RUT:</strong> ${client.tax_id}</td>
+                                <td style="padding:2px;"><strong>Cliente:</strong> ${client.business_name}</td>
+                                <td style="padding:2px;"><strong>CUIT/RUT:</strong> ${client.tax_id}</td>
                             </tr>
                             <tr>
-                                <td><strong>Sede Logística:</strong> ${client.node_name}</td>
-                                <td><strong>Entrega:</strong> ${client.shipping_address || 'A convenir'}</td>
+                                <td style="padding:2px;"><strong>Sede Logística:</strong> ${client.node_name}</td>
+                                <td style="padding:2px;"><strong>Entrega:</strong> ${client.shipping_address || 'A convenir'}</td>
                             </tr>
                         </table>
                     </div>
                     <table>
-                        <thead><tr><th>SKU</th><th>Descripción</th><th style="text-align:center;">Cant.</th><th style="text-align:right;">P. Unit</th><th style="text-align:right;">Subtotal</th></tr></thead>
+                        <thead>
+                            <tr>
+                                <th style="width: 15%;">SKU</th>
+                                <th style="width: 50%;">Descripción</th>
+                                <th style="text-align:center; width: 10%;">Cant.</th>
+                                <th style="text-align:right; width: 12%;">P. Unit</th>
+                                <th style="text-align:right; width: 13%;">Subtotal</th>
+                            </tr>
+                        </thead>
                         <tbody>${itemsHtml}</tbody>
                         <tfoot>
-                            <tr><th colspan="4" style="text-align:right; font-size:18px;">TOTAL USD:</th><th style="text-align:right; font-size:18px;">$${total.toFixed(2)}</th></tr>
+                            <tr>
+                                <th colspan="4" style="text-align:right; font-size:12px; background:transparent; color:#0f172a; padding-top:10px;">TOTAL:</th>
+                                <th style="text-align:right; font-size:12px; background:transparent; color:#0f172a; padding-top:10px;">USD ${total.toFixed(2)}</th>
+                            </tr>
                         </tfoot>
                     </table>
                 </body>
