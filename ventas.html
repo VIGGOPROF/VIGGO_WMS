@@ -419,6 +419,30 @@
             btnDraft.disabled = false; btnFinal.disabled = false;
         };
 
+        window.updateItemQty = (index, newQtyStr) => {
+            let newQty = parseInt(newQtyStr, 10);
+            
+            // Seguro anti-errores: si el usuario borra el número o pone un negativo, lo forzamos a 1
+            if (isNaN(newQty) || newQty <= 0) {
+                newQty = 1; 
+            }
+
+            const sku = cart[index].sku;
+            const productData = priceList.get(sku);
+            
+            // Avisar si la nueva cantidad supera el stock disponible en la sede
+            if (productData && newQty > productData.stock) {
+                alert(`⚠️ Atención: El cliente está pidiendo ${newQty} unidades de ${sku}, pero solo hay ${productData.stock} en stock en esta sede.`);
+            }
+
+            // Actualizamos los datos del carrito en memoria
+            cart[index].qty = newQty;
+            cart[index].subtotal = newQty * cart[index].price;
+            
+            // Redibujamos la tabla para que se actualicen los montos
+            updateCartUI();
+        };
+
         window.removeFromCart = (index) => { cart.splice(index, 1); updateCartUI(); };
 
         const addItemToCart = (skuRaw, qtyRaw) => {
